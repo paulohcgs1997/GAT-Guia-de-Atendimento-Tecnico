@@ -1,0 +1,37 @@
+# Proteção e Configurações PHP
+
+# Ativar logs de erro
+php_flag display_errors Off
+php_flag log_errors On
+php_value error_log /www/wwwroot/gat.programnetwork.com.br/logs/php_errors.log
+
+# Proteger arquivos sensíveis
+<FilesMatch "\.(sql|log|md|example)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger pasta de configuração
+<Files "conexao.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Permitir acesso apenas via PHP includes
+<Files "conexao.php">
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteCond %{THE_REQUEST} ^.+$ [NC]
+        RewriteRule .* - [F,L]
+    </IfModule>
+</Files>
+
+# Configurações de segurança
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Remover assinatura do servidor
+ServerSignature Off

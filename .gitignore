@@ -1,0 +1,61 @@
+# Arquivos de configuração sensíveis
+src/config/conexao.php
+src/config/config.php
+
+# Uploads e mídia
+src/uploads/**
+!src/uploads/.gitkeep
+!src/uploads/config/.gitkeep
+!src/uploads/departamentos/.gitkeep
+
+# Banco de dados
+*.sql
+localhost.sql
+
+# Logs
+*.log
+error_log
+php_errors.log
+
+# Cache e temporários
+*.cache
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# PHP
+vendor/
+composer.phar
+composer.lock
+
+# Node (se houver)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Backup e temporários
+*.bak
+*.backup
+*~
+.tmp/
+temp/
+tmp/
