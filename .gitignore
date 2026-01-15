@@ -10,7 +10,9 @@ src/uploads/**
 
 # Banco de dados
 *.sql
+!install/database.sql
 localhost.sql
+install/.installed
 
 # Logs
 *.log
