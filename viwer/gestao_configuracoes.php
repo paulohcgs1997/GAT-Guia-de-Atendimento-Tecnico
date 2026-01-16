@@ -219,7 +219,12 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                             <h3 class="mb-2">
                                 <i class="bi bi-cloud-download"></i> Atualizador de Sistema
                             </h3>
-                            <p class="text-muted mb-0">Mantenha seu sistema atualizado com as últimas melhorias do GitHub</p>
+                            <p class="text-muted mb-0">
+                                Mantenha seu sistema atualizado com as últimas melhorias do GitHub
+                            </p>
+                            <small class="text-info">
+                                <i class="bi bi-git"></i> <strong>Branch:</strong> main (sempre atualiza do branch principal)
+                            </small>
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-outline-primary" onclick="showGithubConfig()">

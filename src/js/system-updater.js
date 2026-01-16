@@ -70,16 +70,24 @@ async function checkSystemUpdates() {
                             <span class="badge bg-secondary">Atual: v${data.current_version}</span>
                             <i class="bi bi-arrow-right mx-2"></i>
                             <span class="badge bg-success">Nova: v${data.latest_version}</span>
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
+                            </span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-megaphone"></i> ${data.release_info.name}
-                        </h5>
-                        <small>Publicado em ${data.release_info.published_at}</small>
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="bi bi-megaphone"></i> ${data.release_info.name}
+                            </h5>
+                            <small>Publicado em ${data.release_info.published_at}</small>
+                        </div>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-code-slash"></i> ${data.branch || 'main'}
+                        </span>
                     </div>
                     <div class="card-body">
                         <h6>📝 Novidades:</h6>
@@ -104,16 +112,26 @@ ${data.release_info.body || 'Sem descrição disponível'}
         } else if (data.last_commit) {
             // Versão de desenvolvimento
             resultDiv.innerHTML = `
-                <div class="alert alert-info d-flex align-items-center" role="alert">
+                <div class="alert alert-info d-flex align-items-start" role="alert">
                     <i class="bi bi-code-slash me-2" style="font-size: 32px;"></i>
-                    <div>
-                        <strong>Versão de Desenvolvimento</strong>
-                        <p class="mb-2 mt-2">${data.message}</p>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>Versão de Desenvolvimento</strong>
+                            <span class="badge bg-primary">
+                                <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
+                            </span>
+                        </div>
+                        <p class="mb-2">${data.message}</p>
                         <div class="small">
                             <strong>Último commit:</strong> ${data.last_commit.sha}<br>
                             <strong>Mensagem:</strong> ${data.last_commit.message}<br>
                             <strong>Autor:</strong> ${data.last_commit.author}<br>
                             <strong>Data:</strong> ${data.last_commit.date}
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="applySystemUpdate('${data.download_url}', 'main')">
+                                <i class="bi bi-download"></i> Baixar Branch Main
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -121,12 +139,17 @@ ${data.release_info.body || 'Sem descrição disponível'}
         } else {
             // Sistema atualizado
             resultDiv.innerHTML = `
-                <div class="alert alert-success d-flex align-items-center" role="alert">
+                <div class="alert alert-success d-flex align-items-start" role="alert">
                     <i class="bi bi-check-circle-fill me-2" style="font-size: 32px;"></i>
-                    <div>
-                        <strong>Sistema Atualizado!</strong>
-                        <p class="mb-0 mt-2">Você está usando a versão mais recente: <strong>v${data.current_version}</strong></p>
-                        <small class="text-muted">Build: ${data.current_build}</small>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>Sistema Atualizado!</strong>
+                            <span class="badge bg-success">
+                                <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
+                            </span>
+                        </div>
+                        <p class="mb-0">Você está usando a versão mais recente: <strong>v${data.current_version}</strong></p>
+                        <small class="text-muted">Build: ${data.current_build} | Repositório: ${data.repository || 'N/A'}</small>
                     </div>
                 </div>
             `;
@@ -273,6 +296,69 @@ async function applySystemUpdate(downloadUrl, version) {
                     <strong>Erro ao aplicar atualização</strong>
                     <p class="mb-0 mt-1">${error.message}</p>
                     <small class="text-muted">O sistema permanece na versão anterior.</small>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Função para tentar configurar automaticamente o repositório GitHub
+async function tryAutoConfig() {
+    console.log('🔧 tryAutoConfig iniciado');
+    const resultDiv = document.getElementById('updateCheckResult');
+    
+    resultDiv.innerHTML = `
+        <div class="alert alert-info d-flex align-items-center">
+            <div class="spinner-border text-primary me-3" role="status"></div>
+            <div>
+                <strong>Detectando repositório...</strong>
+                <p class="mb-0 mt-2">Tentando detectar automaticamente do .git/config</p>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('../src/php/auto_config_github.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill me-2" style="font-size: 32px;"></i>
+                    <div>
+                        <strong>Repositório configurado automaticamente! 🎉</strong>
+                        <p class="mb-2 mt-2">${data.message}</p>
+                        <div class="small">
+                            <i class="bi bi-github"></i> <strong>Repositório:</strong> ${data.repository}<br>
+                            <i class="bi bi-git"></i> <strong>Branch:</strong> main
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Verificar atualizações automaticamente após configurar
+            setTimeout(() => checkSystemUpdates(), 1500);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning d-flex align-items-start">
+                    <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 24px;"></i>
+                    <div class="flex-grow-1">
+                        <strong>Não foi possível detectar automaticamente</strong>
+                        <p class="mb-2 mt-2">${data.message}</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="showGithubConfig()">
+                            <i class="bi bi-gear"></i> Configurar Manualmente
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger d-flex align-items-center">
+                <i class="bi bi-x-circle-fill me-2" style="font-size: 24px;"></i>
+                <div>
+                    <strong>Erro ao configurar</strong>
+                    <p class="mb-0 mt-1">${error.message}</p>
                 </div>
             </div>
         `;
