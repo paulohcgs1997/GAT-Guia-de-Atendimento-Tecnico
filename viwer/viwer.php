@@ -23,7 +23,9 @@ check_permission_viewer();
         const canal = new BroadcastChannel('guia-acoes');
         const container = document.getElementById('container-viwer');
         let servicoAtual = null;
-        let todosSteps = []; // Armazenar todos os steps do serviço
+        let todosBlocos = []; // Armazenar todos os blocos do serviço
+        let blocoAtualIndex = 0; // Índice do bloco atual
+        let todosSteps = []; // Armazenar todos os steps do bloco atual
         let stepAtualIndex = 0; // Índice do step atual
         let navegacaoPorPerguntas = false; // Flag para indicar se está navegando por perguntas
 
@@ -78,16 +80,15 @@ check_permission_viewer();
                     description: data.servico_description || ''
                 };
 
-                // Armazenar todos os steps do serviço
-                todosSteps = data.steps || [];
-                stepAtualIndex = 0;
-                navegacaoPorPerguntas = false; // Resetar flag
-
-                // Exibir primeiro step
-                if (todosSteps.length > 0) {
-                    exibirStepPorIndice(0);
+                // Armazenar todos os blocos do serviço
+                todosBlocos = data.blocos || [];
+                blocoAtualIndex = 0;
+                
+                // Se tem blocos, carregar o primeiro
+                if (todosBlocos.length > 0) {
+                    carregarBloco(0);
                 } else {
-                    container.innerHTML = '<div class="erro-mensagem">Nenhum passo encontrado para este serviço.</div>';
+                    container.innerHTML = '<div class="erro-mensagem">Nenhum bloco encontrado para este serviço.</div>';
                 }
             })
             .catch(error => {
@@ -115,22 +116,59 @@ check_permission_viewer();
                         return;
                     }
 
-                    // Armazenar todos os steps do serviço
-                    todosSteps = data.steps || [];
-                    stepAtualIndex = 0;
-                    navegacaoPorPerguntas = false; // Resetar flag
-
-                    // Exibir primeiro step
-                    if (todosSteps.length > 0) {
-                        exibirStepPorIndice(0);
+                    // Armazenar todos os blocos do serviço
+                    todosBlocos = data.blocos || [];
+                    blocoAtualIndex = 0;
+                    
+                    // Se tem blocos, carregar o primeiro
+                    if (todosBlocos.length > 0) {
+                        carregarBloco(0);
                     } else {
-                        container.innerHTML = '<div class="erro-mensagem">Nenhum passo encontrado para este serviço.</div>';
+                        container.innerHTML = '<div class="erro-mensagem">Nenhum bloco encontrado para este serviço.</div>';
                     }
                 })
                 .catch(error => {
                     console.error('Erro ao carregar serviço:', error);
                     container.innerHTML = '<div class="erro-mensagem">Erro ao carregar o guia de atendimento.</div>';
                 });
+        }
+        
+        function carregarBloco(indice) {
+            if (indice < 0 || indice >= todosBlocos.length) {
+                mostrarFinalTutorial();
+                return;
+            }
+            
+            blocoAtualIndex = indice;
+            const bloco = todosBlocos[indice];
+            
+            // Carregar steps deste bloco
+            todosSteps = bloco.steps || [];
+            stepAtualIndex = 0;
+            navegacaoPorPerguntas = false;
+            
+            // Exibir primeiro step do bloco
+            if (todosSteps.length > 0) {
+                exibirStepPorIndice(0);
+            } else {
+                // Se não tem steps, avançar para próximo bloco
+                avancarParaProximoBloco();
+            }
+        }
+        
+        function avancarParaProximoBloco() {
+            const proximoBlocoIndex = blocoAtualIndex + 1;
+            
+            if (proximoBlocoIndex >= todosBlocos.length) {
+                // Não há mais blocos, finalizar serviço
+                mostrarFinalTutorial();
+            } else {
+                // Carregar próximo bloco
+                container.innerHTML = '<div class="loading">Carregando próximo tutorial...</div>';
+                setTimeout(() => {
+                    carregarBloco(proximoBlocoIndex);
+                }, 500);
+            }
         }
 
         function exibirStepPorIndice(indice) {
@@ -209,8 +247,10 @@ check_permission_viewer();
                 `;
 
                 step.questions.forEach(question => {
+                    // Adicionar aspas se for string (next_block), manter número se for ID
+                    const proximoParam = isNaN(question.proximo) ? `'${question.proximo}'` : question.proximo;
                     html += `
-                        <button class="question-btn" onclick="proximoStep(${question.proximo})">
+                        <button class="question-btn" onclick="proximoStep(${proximoParam})">
                             ${question.text}
                         </button>
                     `;
@@ -256,11 +296,10 @@ check_permission_viewer();
         function proximoStep(stepId) {
             if (!servicoAtual) return;
 
-            // Verificar se deve avançar para o próximo bloco/tutorial
-            if (stepId === 'next_block' || stepId === 505 || stepId == '505') {
-                // "next_block" significa fim de um fluxo de perguntas, voltar para sequência linear
-                navegacaoPorPerguntas = false;
-                avancarParaProximoStep();
+            // Verificar se deve avançar para o próximo bloco (next_block significa fim do tutorial/bloco atual)
+            if (stepId === 'next_block') {
+                // Avançar para o próximo bloco
+                avancarParaProximoBloco();
                 return;
             }
 

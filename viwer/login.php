@@ -1,4 +1,11 @@
 <?php
+// Verifica se o sistema está instalado
+$installFlag = __DIR__ . '/../install/.installed';
+if (!file_exists($installFlag)) {
+    header('Location: ../install/index.php');
+    exit;
+}
+
 session_start();
 if (isset($_SESSION['user_hash_login'])) {
     header('Location: dashboard.php');

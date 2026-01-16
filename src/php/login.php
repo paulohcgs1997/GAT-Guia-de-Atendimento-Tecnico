@@ -99,9 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit;
 };
 function hash_login($user, $timestamp) {
-    include_once __DIR__ . '/../config/config.php';
+    // Usa a constante definida em conexao.php
+    if (!defined('SYSTEM_SESSION_KEY')) {
+        require_once __DIR__ . '/../config/conexao.php';
+    }
+    
     $id_user = $user;
-    $session_key = $key_system_session;
+    $session_key = SYSTEM_SESSION_KEY;
     
     // Cria um hash seguro combinando ID do usuário, chave e timestamp fixo
     $data_to_hash = $id_user . '|' . $session_key . '|' . $timestamp;

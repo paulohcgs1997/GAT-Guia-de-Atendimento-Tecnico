@@ -176,9 +176,85 @@ if ($action === 'install') {
         // Cria flag de instalação
         createInstallFlag();
         
+        // ========== APLICAR ATUALIZAÇÕES AUTOMÁTICAS ==========
+        $updates_log = [];
+        $updates_errors = [];
+        
+        try {
+            // Reconectar ao banco recém-criado
+            $mysqli = new mysqli($host, $user, $pass, $dbname);
+            $mysqli->set_charset('utf8mb4');
+            
+            // Buscar arquivos de atualização na pasta install
+            $update_files = glob(__DIR__ . '/update_*.sql');
+            
+            foreach ($update_files as $update_file) {
+                $filename = basename($update_file);
+                
+                try {
+                    // Ler conteúdo do arquivo
+                    $sql_content = file_get_contents($update_file);
+                    
+                    if ($sql_content === false) {
+                        $updates_errors[] = "$filename: Não foi possível ler o arquivo";
+                        continue;
+                    }
+                    
+                    // Remover comentários
+                    $sql_content = preg_replace('/--[^\n]*\n/', "\n", $sql_content);
+                    
+                    // Dividir queries
+                    $queries = array_filter(array_map('trim', preg_split('/;[\s]*(\n|$)/', $sql_content)));
+                    
+                    $executed = 0;
+                    $skipped = 0;
+                    
+                    foreach ($queries as $query) {
+                        if (empty($query) || strlen($query) < 5) continue;
+                        
+                        if ($mysqli->query($query)) {
+                            $executed++;
+                        } else {
+                            // Ignorar erros de coluna duplicada (não crítico)
+                            if (stripos($mysqli->error, 'Duplicate column name') !== false || 
+                                stripos($mysqli->error, 'Unknown column') !== false) {
+                                $skipped++;
+                            }
+                        }
+                    }
+                    
+                    if ($executed > 0 || $skipped > 0) {
+                        $updates_log[] = "$filename: $executed executado(s), $skipped já existente(s)";
+                    }
+                    
+                } catch (Exception $e) {
+                    $updates_errors[] = "$filename: " . $e->getMessage();
+                }
+            }
+            
+            $mysqli->close();
+            
+        } catch (Exception $e) {
+            $updates_errors[] = "Erro ao aplicar atualizações: " . $e->getMessage();
+        }
+        
+        // Preparar mensagem de resposta
+        $message = 'Sistema instalado com sucesso!';
+        
+        if (count($updates_log) > 0) {
+            $message .= "\n\n✅ Atualizações aplicadas:\n" . implode("\n", $updates_log);
+        }
+        
+        if (count($updates_errors) > 0) {
+            $message .= "\n\n⚠️ Avisos durante atualizações:\n" . implode("\n", $updates_errors);
+            $message .= "\n\nO sistema foi instalado normalmente. Você pode aplicar as atualizações manualmente em Configurações → Verificador de Banco de Dados.";
+        }
+        
         echo json_encode([
             'success' => true,
-            'message' => 'Sistema instalado com sucesso!'
+            'message' => $message,
+            'updates_applied' => count($updates_log),
+            'updates_errors' => count($updates_errors)
         ]);
         
     } catch (Exception $e) {

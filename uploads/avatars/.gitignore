@@ -1,0 +1,9 @@
+# Ignorar todas as fotos de avatar
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Manter o README
+!README.md

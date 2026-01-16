@@ -53,8 +53,10 @@ try {
     }
     
     $steps_completos = [];
+    $blocos_info = []; // Armazenar informações sobre cada bloco
     
     while ($bloco = $result->fetch_assoc()) {
+        $bloco_steps = []; // Steps deste bloco específico
         $step_ids = $bloco['id_step'];
         
         if (!empty($step_ids)) {
@@ -76,13 +78,22 @@ try {
                     }
                 }
                 
-                $steps_completos[] = $step;
+                $bloco_steps[] = $step;
+                $steps_completos[] = $step; // Manter compatibilidade
             }
         }
+        
+        // Armazenar informação do bloco
+        $blocos_info[] = [
+            'id' => $bloco['id'],
+            'name' => $bloco['name'],
+            'steps' => $bloco_steps
+        ];
     }
     
     echo json_encode([
-        'steps' => $steps_completos,
+        'steps' => $steps_completos, // Array completo para compatibilidade
+        'blocos' => $blocos_info, // Array de blocos separados
         'servico_name' => $servico['name'],
         'servico_description' => $servico['description'],
         'servico_departamento' => $servico['dept_name']
