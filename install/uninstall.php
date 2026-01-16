@@ -386,11 +386,29 @@ if (file_exists($configFile)) {
                 
                 const result = await response.json();
                 
+                console.log('Resposta completa:', result);
+                console.log('Debug log:', result.debug);
+                
                 if (result.success) {
                     document.getElementById('loadingSection').style.display = 'none';
                     document.getElementById('successSection').style.display = 'block';
+                    
+                    // Mostrar debug em caso de sucesso (opcional, para verificação)
+                    if (result.debug && result.debug.length > 0) {
+                        console.log('=== LOG DE DESINSTALAÇÃO ===');
+                        result.debug.forEach(log => console.log(log));
+                    }
                 } else {
-                    showAlert('Erro: ' + result.message, 'error');
+                    let errorMsg = result.message || 'Erro desconhecido';
+                    
+                    // Adicionar debug ao erro se disponível
+                    if (result.debug && result.debug.length > 0) {
+                        console.error('=== DEBUG LOG ===');
+                        result.debug.forEach(log => console.error(log));
+                        errorMsg += '\n\n📋 Veja o console (F12) para mais detalhes.';
+                    }
+                    
+                    showAlert(errorMsg, 'error');
                     document.getElementById('loadingSection').style.display = 'none';
                     document.getElementById('uninstallForm').style.display = 'block';
                 }
@@ -404,13 +422,19 @@ if (file_exists($configFile)) {
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.whiteSpace = 'pre-wrap';
+            alertDiv.style.maxHeight = '300px';
+            alertDiv.style.overflowY = 'auto';
             alertDiv.textContent = message;
             
             const container = document.getElementById('alertContainer');
             container.innerHTML = '';
             container.appendChild(alertDiv);
             
-            setTimeout(() => alertDiv.remove(), 5000);
+            // Não remover automaticamente se for erro
+            if (type !== 'error') {
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
         }
     </script>
 </body>
