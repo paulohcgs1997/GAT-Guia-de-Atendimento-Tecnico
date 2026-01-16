@@ -1,29 +1,61 @@
 // Sistema de Atualização Automática via GitHub
 
 async function checkSystemUpdates() {
+    console.log('🔍 checkSystemUpdates iniciado');
     const btnCheck = document.getElementById('btnCheckUpdates');
     const resultDiv = document.getElementById('updateCheckResult');
     
-    if (!btnCheck || !resultDiv) return;
+    console.log('btnCheck:', btnCheck);
+    console.log('resultDiv:', resultDiv);
+    
+    if (!btnCheck || !resultDiv) {
+        console.error('❌ Elementos não encontrados!');
+        return;
+    }
     
     // Desabilitar botão e mostrar loading
     btnCheck.disabled = true;
     btnCheck.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm"></i> Verificando...';
     
     try {
+        console.log('📡 Fazendo requisição para check_updates.php');
         const response = await fetch('../src/php/check_updates.php');
+        console.log('📡 Response status:', response.status);
         const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
         
         if (!data.success) {
-            resultDiv.innerHTML = `
-                <div class="alert alert-warning d-flex align-items-center" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 24px;"></i>
-                    <div>
-                        <strong>Aviso:</strong> ${data.error || data.message}
-                        <br><small class="text-muted">Versão atual: ${data.current_version}</small>
+            // Se o erro é de repositório não configurado, mostrar opção de auto-configurar
+            if (data.error && data.error.includes('não configurado')) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning d-flex align-items-start" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 24px;"></i>
+                        <div class="flex-grow-1">
+                            <strong>Repositório não configurado</strong>
+                            <p class="mb-2 mt-2">${data.message}</p>
+                            <small class="text-muted">Versão atual: ${data.current_version}</small>
+                        </div>
                     </div>
-                </div>
-            `;
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-primary" onclick="tryAutoConfig()">
+                            <i class="bi bi-magic"></i> Tentar Configurar Automaticamente
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showGithubConfig()">
+                            <i class="bi bi-gear"></i> Configurar Manualmente
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 24px;"></i>
+                        <div>
+                            <strong>Aviso:</strong> ${data.error || data.message}
+                            <br><small class="text-muted">Versão atual: ${data.current_version}</small>
+                        </div>
+                    </div>
+                `;
+            }
             return;
         }
         
@@ -113,6 +145,67 @@ ${data.release_info.body || 'Sem descrição disponível'}
     } finally {
         btnCheck.disabled = false;
         btnCheck.innerHTML = '<i class="bi bi-arrow-repeat"></i> Verificar Atualizações';
+    }
+}
+
+// Tentar configurar repositório automaticamente
+async function tryAutoConfig() {
+    const resultDiv = document.getElementById('updateCheckResult');
+    
+    resultDiv.innerHTML = `
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <div class="spinner-border text-primary me-3" role="status">
+                <span class="visually-hidden">Configurando...</span>
+            </div>
+            <div>
+                <strong>Detectando repositório...</strong>
+                <p class="mb-0 mt-2">Verificando arquivo .git/config</p>
+            </div>
+        </div>
+    `;
+    
+    try {
+        // Tentar detectar repositório via check_updates (que já tem a lógica)
+        const response = await fetch('../src/php/auto_config_github.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2" style="font-size: 32px;"></i>
+                    <div>
+                        <strong>Repositório configurado automaticamente!</strong>
+                        <p class="mb-0 mt-2">📦 ${data.repository}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Tentar verificar atualizações novamente
+            setTimeout(() => checkSystemUpdates(), 1500);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 24px;"></i>
+                    <div>
+                        <strong>Não foi possível detectar automaticamente</strong>
+                        <p class="mb-2 mt-2">${data.message}</p>
+                        <button class="btn btn-sm btn-primary" onclick="showGithubConfig()">
+                            <i class="bi bi-gear"></i> Configurar Manualmente
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-circle-fill me-2" style="font-size: 24px;"></i>
+                <div>
+                    <strong>Erro na configuração automática</strong>
+                    <p class="mb-0 mt-1">${error.message}</p>
+                </div>
+            </div>
+        `;
     }
 }
 
