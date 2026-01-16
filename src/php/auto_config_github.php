@@ -8,11 +8,14 @@ require_once __DIR__ . '/../config/conexao.php';
 
 header('Content-Type: application/json');
 
-// Verificar autenticação e permissão de admin
-if (!isset($_SESSION['user_id']) || $_SESSION['perfil'] != '1') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Acesso negado']);
-    exit;
+// Verificar autenticação (permitir qualquer usuário logado)
+if (!isset($_SESSION['user_id'])) {
+    // Se não estiver logado, tentar configurar mesmo assim (para instalação inicial)
+    // mas não salvar no banco
+    $canSave = false;
+} else {
+    // Se estiver logado, verificar se é admin
+    $canSave = ($_SESSION['perfil'] == '1');
 }
 
 try {
@@ -78,39 +81,53 @@ try {
         throw new Exception("Erro ao verificar repositório (HTTP {$http_code})");
     }
     
-    // Salvar no banco de dados
-    $config_data = json_encode([
-        'owner' => $owner,
-        'repo' => $repo,
-        'configured_at' => date('Y-m-d H:i:s'),
-        'auto_configured' => true
-    ]);
-    
-    // Verificar se já existe
-    $check_sql = "SELECT id FROM system_config WHERE config_key = 'github_repository'";
-    $check_result = $mysqli->query($check_sql);
-    
-    if ($check_result->num_rows > 0) {
-        // Atualizar
-        $stmt = $mysqli->prepare("UPDATE system_config SET config_value = ? WHERE config_key = 'github_repository'");
-        $stmt->bind_param('s', $config_data);
+    // Se pode salvar no banco, salvar
+    if ($canSave) {
+        // Salvar no banco de dados
+        $config_data = json_encode([
+            'owner' => $owner,
+            'repo' => $repo,
+            'configured_at' => date('Y-m-d H:i:s'),
+            'auto_configured' => true
+        ]);
+        
+        // Verificar se já existe
+        $check_sql = "SELECT id FROM system_config WHERE config_key = 'github_repository'";
+        $check_result = $mysqli->query($check_sql);
+        
+        if ($check_result->num_rows > 0) {
+            // Atualizar
+            $stmt = $mysqli->prepare("UPDATE system_config SET config_value = ? WHERE config_key = 'github_repository'");
+            $stmt->bind_param('s', $config_data);
+        } else {
+            // Inserir
+            $stmt = $mysqli->prepare("INSERT INTO system_config (config_key, config_value) VALUES ('github_repository', ?)");
+            $stmt->bind_param('s', $config_data);
+        }
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Erro ao salvar no banco de dados: ' . $stmt->error);
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Repositório configurado e salvo automaticamente',
+            'repository' => "https://github.com/{$owner}/{$repo}",
+            'owner' => $owner,
+            'repo' => $repo,
+            'saved' => true
+        ]);
     } else {
-        // Inserir
-        $stmt = $mysqli->prepare("INSERT INTO system_config (config_key, config_value) VALUES ('github_repository', ?)");
-        $stmt->bind_param('s', $config_data);
+        // Apenas detectou, mas não salvou
+        echo json_encode([
+            'success' => true,
+            'message' => 'Repositório detectado (não salvo - sem permissão)',
+            'repository' => "https://github.com/{$owner}/{$repo}",
+            'owner' => $owner,
+            'repo' => $repo,
+            'saved' => false
+        ]);
     }
-    
-    if (!$stmt->execute()) {
-        throw new Exception('Erro ao salvar no banco de dados: ' . $stmt->error);
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'message' => 'Repositório configurado automaticamente',
-        'repository' => "https://github.com/{$owner}/{$repo}",
-        'owner' => $owner,
-        'repo' => $repo
-    ]);
     
 } catch (Exception $e) {
     echo json_encode([

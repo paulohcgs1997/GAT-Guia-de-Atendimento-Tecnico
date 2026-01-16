@@ -571,7 +571,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'deploy') {
         <div style="text-align: center; margin-top: 15px;">
             <a href="?action=download" style="color: #667eea; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 5px;">
                 <span style="font-size: 18px;">📥</span>
-                Baixar este arquivo (deploy.php)
+                Baixar este arquivo (install.php)
             </a>
         </div>
     </div>

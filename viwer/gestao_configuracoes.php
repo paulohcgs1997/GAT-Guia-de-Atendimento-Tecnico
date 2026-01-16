@@ -277,6 +277,22 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                     
                     <hr class="my-3">
                     
+                    <!-- Badge de Status do Repositório -->
+                    <div id="repoStatusBadge" style="display: none; margin-bottom: 15px;">
+                        <div class="alert alert-success d-flex align-items-center" style="padding: 10px 15px;">
+                            <i class="bi bi-github me-2"></i>
+                            <div class="flex-grow-1">
+                                <small>
+                                    <strong>Repositório Configurado:</strong> 
+                                    <span id="repoUrl">-</span>
+                                </small>
+                            </div>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> Auto-detectado
+                            </span>
+                        </div>
+                    </div>
+                    
                     <div id="updateCheckResult">
                         <div class="alert alert-info d-flex align-items-center" role="alert">
                             <i class="bi bi-info-circle-fill me-2" style="font-size: 24px;"></i>
@@ -330,17 +346,56 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <script src="../src/js/system-updater.js"></script>
     <script src="../src/js/github-config.js"></script>
     
-    <!-- Teste de Debug -->
+    <!-- Auto-configuração e Verificação de Atualizações -->
     <script>
         console.log('✅ Scripts carregados');
-        console.log('- checkSystemUpdates:', typeof checkSystemUpdates);
-        console.log('- showGithubConfig:', typeof showGithubConfig);
-        console.log('- saveGithubConfig:', typeof saveGithubConfig);
-        console.log('- tryAutoConfig:', typeof tryAutoConfig);
+        
+        // Flag para controlar se já configurou
+        let autoConfigAttempted = false;
+        
+        // Função para auto-configurar repositório silenciosamente
+        async function autoConfigureGithub() {
+            if (autoConfigAttempted) {
+                console.log('⏭️ Auto-configuração já tentada');
+                return;
+            }
+            
+            autoConfigAttempted = true;
+            console.log('🔧 Tentando auto-configurar repositório GitHub...');
+            
+            try {
+                const response = await fetch('../src/php/auto_config_github.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ Repositório configurado automaticamente:', data.repository);
+                    
+                    // Mostrar badge de status
+                    const statusBadge = document.getElementById('repoStatusBadge');
+                    const repoUrl = document.getElementById('repoUrl');
+                    if (statusBadge && repoUrl) {
+                        repoUrl.innerHTML = `<a href="${data.repository}" target="_blank" style="color: inherit; text-decoration: underline;">${data.owner}/${data.repo}</a>`;
+                        statusBadge.style.display = 'block';
+                    }
+                    
+                    return true;
+                } else {
+                    console.log('⚠️ Auto-configuração falhou:', data.message);
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Erro na auto-configuração:', error);
+                return false;
+            }
+        }
         
         // Teste: verificar se botões existem
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔍 DOM carregado');
+            console.log('- checkSystemUpdates:', typeof checkSystemUpdates);
+            console.log('- showGithubConfig:', typeof showGithubConfig);
+            console.log('- saveGithubConfig:', typeof saveGithubConfig);
+            console.log('- tryAutoConfig:', typeof tryAutoConfig);
             console.log('- btnCheckUpdates:', document.getElementById('btnCheckUpdates'));
             console.log('- githubConfigSection:', document.getElementById('githubConfigSection'));
             console.log('- updateCheckResult:', document.getElementById('updateCheckResult'));
@@ -348,15 +403,19 @@ check_permission_admin(); // Apenas admin pode alterar configurações
             // Auto-verificar atualizações quando a aba é ativada
             const updatesTab = document.getElementById('updates-tab');
             if (updatesTab) {
-                updatesTab.addEventListener('shown.bs.tab', function() {
+                updatesTab.addEventListener('shown.bs.tab', async function() {
                     console.log('📑 Aba de Atualizações ativada');
-                    // Pequeno delay para garantir que elementos estejam prontos
+                    
+                    // Primeiro, tentar auto-configurar (se necessário)
+                    await autoConfigureGithub();
+                    
+                    // Depois verificar atualizações
                     setTimeout(() => {
                         if (typeof checkSystemUpdates === 'function') {
                             console.log('🚀 Verificando atualizações automaticamente...');
                             checkSystemUpdates();
                         }
-                    }, 300);
+                    }, 500);
                 });
             }
             
