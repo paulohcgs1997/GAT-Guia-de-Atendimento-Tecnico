@@ -1,3 +1,10 @@
+<?php
+// Verifica se veio de um erro do uninstall
+$errorMessage = '';
+if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
+    $errorMessage = 'Sistema não está instalado. Não há nada para desinstalar.';
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -228,6 +235,11 @@
         <div class="header">
             <h1>🚀 Instalador GAT</h1>
             <p>Sistema de Gestão de Tutoriais</p>
+            <div style="margin-top: 15px;">
+                <a href="uninstall.php" style="color: rgba(255,255,255,0.9); text-decoration: none; font-size: 13px; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; display: inline-block; transition: all 0.3s;">
+                    🗑️ Desinstalar Sistema
+                </a>
+            </div>
         </div>
 
         <div class="content">
@@ -235,6 +247,12 @@
                 <div class="progress-bar-fill" id="progressBar" style="width: 33%"></div>
             </div>
 
+            
+            <?php if ($errorMessage): ?>
+            <div class="alert alert-error">
+                <?php echo htmlspecialchars($errorMessage); ?>
+            </div>
+            <?php endif; ?>
             <div class="step-indicator">
                 <div class="step-dot active" id="dot1"></div>
                 <div class="step-dot" id="dot2"></div>
@@ -314,9 +332,25 @@
             <div class="step" id="step4">
                 <div class="success-icon">✓</div>
                 <h2 style="text-align: center; color: #333; margin-bottom: 20px;">Instalação Concluída!</h2>
-                <div class="alert alert-success" style="text-align: center;">
+                <div class="alert alert-success" style="text-align: center;" id="successMessage">
                     <strong>Sistema instalado com sucesso!</strong><br>
                     Você já pode fazer login no sistema.
+                </div>
+                <div id="updatesInfo" style="margin-top: 20px; display: none;">
+                    <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 10px;">📦 Atualizações Aplicadas Automaticamente</div>
+                        <div id="updatesLog" style="font-size: 14px; color: #1e3a8a;"></div>
+                    </div>
+                </div>
+                <div id="updatesWarnings" style="margin-top: 20px; display: none;">
+                    <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #92400e; margin-bottom: 10px;">⚠️ Avisos</div>
+                        <div id="warningsLog" style="font-size: 13px; color: #78350f;"></div>
+                        <div style="margin-top: 10px; font-size: 13px; color: #78350f;">
+                            💡 Você pode aplicar atualizações manualmente em:<br>
+                            <strong>Configurações → Verificador de Banco de Dados</strong>
+                        </div>
+                    </div>
                 </div>
                 <button class="btn" onclick="window.location.href='../viwer/login.php'">Ir para Login</button>
             </div>
@@ -388,6 +422,59 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // Atualizar mensagem de sucesso
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.innerHTML = `
+                        <strong>Sistema instalado com sucesso!</strong><br>
+                        Você já pode fazer login no sistema.
+                    `;
+                    
+                    // Mostrar informações sobre atualizações aplicadas
+                    if (result.updates_applied > 0) {
+                        const updatesInfo = document.getElementById('updatesInfo');
+                        const updatesLog = document.getElementById('updatesLog');
+                        updatesInfo.style.display = 'block';
+                        
+                        // Processar mensagem para extrair atualizações
+                        const lines = result.message.split('\n');
+                        let updatesHtml = '<ul style="margin: 10px 0; padding-left: 20px;">';
+                        
+                        let inUpdates = false;
+                        lines.forEach(line => {
+                            if (line.includes('Atualizações aplicadas:')) {
+                                inUpdates = true;
+                            } else if (inUpdates && line.trim() && !line.includes('Avisos')) {
+                                updatesHtml += `<li>${line.trim()}</li>`;
+                            }
+                        });
+                        
+                        updatesHtml += '</ul>';
+                        updatesLog.innerHTML = updatesHtml;
+                    }
+                    
+                    // Mostrar avisos se houver
+                    if (result.updates_errors > 0) {
+                        const warningsDiv = document.getElementById('updatesWarnings');
+                        const warningsLog = document.getElementById('warningsLog');
+                        warningsDiv.style.display = 'block';
+                        
+                        // Extrair avisos da mensagem
+                        const lines = result.message.split('\n');
+                        let warningsHtml = '<ul style="margin: 10px 0; padding-left: 20px;">';
+                        
+                        let inWarnings = false;
+                        lines.forEach(line => {
+                            if (line.includes('Avisos durante atualizações:')) {
+                                inWarnings = true;
+                            } else if (inWarnings && line.trim() && !line.includes('O sistema foi instalado')) {
+                                warningsHtml += `<li>${line.trim()}</li>`;
+                            }
+                        });
+                        
+                        warningsHtml += '</ul>';
+                        warningsLog.innerHTML = warningsHtml;
+                    }
+                    
                     goToStep(4);
                 } else {
                     showAlert('Erro na instalação: ' + result.message, 'error');

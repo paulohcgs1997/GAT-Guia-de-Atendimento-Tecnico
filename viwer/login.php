@@ -1,4 +1,11 @@
 <?php
+// Verifica se o sistema está instalado
+$installFlag = __DIR__ . '/../install/.installed';
+if (!file_exists($installFlag)) {
+    header('Location: ../install/index.php');
+    exit;
+}
+
 session_start();
 if (isset($_SESSION['user_hash_login'])) {
     header('Location: dashboard.php');
@@ -131,8 +138,13 @@ if (!isset($systemName)) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Redirecionar para o dashboard em caso de sucesso
-                    window.location.href = 'dashboard.php';
+                    // Verificar se precisa trocar senha
+                    if (data.force_password_change) {
+                        window.location.href = 'change_password.php';
+                    } else {
+                        // Redirecionar para o dashboard em caso de sucesso
+                        window.location.href = 'dashboard.php';
+                    }
                 } else {
                     // Mostrar formulário novamente em caso de erro
                     loginContainer.style.display = 'block';

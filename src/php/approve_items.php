@@ -50,19 +50,45 @@ if ($action === 'approve_service_complete') {
         // Se for clone, atualizar o original
         if ($servico['is_clone'] == 1 && $servico['original_id']) {
             // Atualizar serviço original
-            $update_stmt = $mysqli->prepare("UPDATE services SET 
-                name = ?,
-                keywords = ?,
-                accept = 1,
-                rejection_reason = NULL,
-                rejected_by = NULL,
-                reject_date = NULL,
-                last_modification = NOW()
-                WHERE id = ?");
+            // Verificar se existe coluna status
+            $check_col = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+            $has_status = $check_col->num_rows > 0;
             
-            $update_stmt->bind_param("ssi", 
+            if ($has_status) {
+                $update_stmt = $mysqli->prepare("UPDATE services SET 
+                    name = ?,
+                    description = ?,
+                    departamento = ?,
+                    blocos = ?,
+                    word_keys = ?,
+                    status = 'approved',
+                    accept = 1,
+                    rejection_reason = NULL,
+                    rejected_by = NULL,
+                    reject_date = NULL,
+                    last_modification = NOW()
+                    WHERE id = ?");
+            } else {
+                $update_stmt = $mysqli->prepare("UPDATE services SET 
+                    name = ?,
+                    description = ?,
+                    departamento = ?,
+                    blocos = ?,
+                    word_keys = ?,
+                    accept = 1,
+                    rejection_reason = NULL,
+                    rejected_by = NULL,
+                    reject_date = NULL,
+                    last_modification = NOW()
+                    WHERE id = ?");
+            }
+            
+            $update_stmt->bind_param("ssissi", 
                 $servico['name'],
-                $servico['keywords'],
+                $servico['description'],
+                $servico['departamento'],
+                $servico['blocos'],
+                $servico['word_keys'],
                 $servico['original_id']
             );
             $update_stmt->execute();
@@ -75,7 +101,15 @@ if ($action === 'approve_service_complete') {
             $service_id_to_use = $servico['original_id'];
         } else {
             // Serviço novo, apenas aprovar
-            $stmt = $mysqli->prepare("UPDATE services SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            // Verificar se existe coluna status
+            $check_col = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+            $has_status = $check_col->num_rows > 0;
+            
+            if ($has_status) {
+                $stmt = $mysqli->prepare("UPDATE services SET status = 'approved', accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            } else {
+                $stmt = $mysqli->prepare("UPDATE services SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            }
             $stmt->bind_param("i", $service_id);
             $stmt->execute();
             
@@ -104,15 +138,32 @@ if ($action === 'approve_service_complete') {
             
             if ($tutorial['is_clone'] == 1 && $tutorial['original_id']) {
                 // Atualizar tutorial original
-                $update_tut = $mysqli->prepare("UPDATE blocos SET 
-                    name = ?,
-                    id_step = ?,
-                    accept = 1,
-                    rejection_reason = NULL,
-                    rejected_by = NULL,
-                    reject_date = NULL,
-                    last_modification = NOW()
-                    WHERE id = ?");
+                // Verificar se existe coluna status
+                $check_col_tut = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+                $has_status_tut = $check_col_tut->num_rows > 0;
+                
+                if ($has_status_tut) {
+                    $update_tut = $mysqli->prepare("UPDATE blocos SET 
+                        name = ?,
+                        id_step = ?,
+                        status = 'approved',
+                        accept = 1,
+                        rejection_reason = NULL,
+                        rejected_by = NULL,
+                        reject_date = NULL,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                } else {
+                    $update_tut = $mysqli->prepare("UPDATE blocos SET 
+                        name = ?,
+                        id_step = ?,
+                        accept = 1,
+                        rejection_reason = NULL,
+                        rejected_by = NULL,
+                        reject_date = NULL,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                }
                 
                 $update_tut->bind_param("ssi", 
                     $tutorial['name'],
@@ -127,7 +178,15 @@ if ($action === 'approve_service_complete') {
                 $delete_tut->execute();
             } else {
                 // Tutorial novo, apenas aprovar
-                $approve_tut = $mysqli->prepare("UPDATE blocos SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+                // Verificar se existe coluna status
+                $check_col_tut = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+                $has_status_tut = $check_col_tut->num_rows > 0;
+                
+                if ($has_status_tut) {
+                    $approve_tut = $mysqli->prepare("UPDATE blocos SET status = 'approved', accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+                } else {
+                    $approve_tut = $mysqli->prepare("UPDATE blocos SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+                }
                 $approve_tut->bind_param("i", $tutorial['id']);
                 $approve_tut->execute();
             }
@@ -188,12 +247,26 @@ if ($action === 'approve') {
                 replaceOriginalWithClone($mysqli, $id, $tutorial['original_id']);
                 
                 // Atualizar o original com os dados do clone
-                $update_stmt = $mysqli->prepare("UPDATE blocos SET 
-                    name = ?,
-                    id_step = ?,
-                    accept = 1,
-                    last_modification = NOW()
-                    WHERE id = ?");
+                // Verificar se existe coluna status
+                $check_col = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+                $has_status = $check_col->num_rows > 0;
+                
+                if ($has_status) {
+                    $update_stmt = $mysqli->prepare("UPDATE blocos SET 
+                        name = ?,
+                        id_step = ?,
+                        status = 'approved',
+                        accept = 1,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                } else {
+                    $update_stmt = $mysqli->prepare("UPDATE blocos SET 
+                        name = ?,
+                        id_step = ?,
+                        accept = 1,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                }
                 
                 $update_stmt->bind_param("ssi", 
                     $tutorial['name'],
@@ -217,7 +290,15 @@ if ($action === 'approve') {
             
         } else {
             // Tutorial novo, apenas marcar como aprovado e limpar rejeição anterior
-            $stmt = $mysqli->prepare("UPDATE blocos SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            // Verificar se existe coluna status
+            $check_col = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+            $has_status = $check_col->num_rows > 0;
+            
+            if ($has_status) {
+                $stmt = $mysqli->prepare("UPDATE blocos SET status = 'approved', accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            } else {
+                $stmt = $mysqli->prepare("UPDATE blocos SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            }
             $stmt->bind_param("i", $id);
             
             if ($stmt->execute()) {
@@ -246,15 +327,32 @@ if ($action === 'approve') {
             
             try {
                 // Atualizar o original com os dados do clone
-                $update_stmt = $mysqli->prepare("UPDATE services SET 
-                    name = ?,
-                    description = ?,
-                    departamento = ?,
-                    blocos = ?,
-                    word_keys = ?,
-                    accept = 1,
-                    last_modification = NOW()
-                    WHERE id = ?");
+                // Verificar se existe coluna status
+                $check_col = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+                $has_status = $check_col->num_rows > 0;
+                
+                if ($has_status) {
+                    $update_stmt = $mysqli->prepare("UPDATE services SET 
+                        name = ?,
+                        description = ?,
+                        departamento = ?,
+                        blocos = ?,
+                        word_keys = ?,
+                        status = 'approved',
+                        accept = 1,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                } else {
+                    $update_stmt = $mysqli->prepare("UPDATE services SET 
+                        name = ?,
+                        description = ?,
+                        departamento = ?,
+                        blocos = ?,
+                        word_keys = ?,
+                        accept = 1,
+                        last_modification = NOW()
+                        WHERE id = ?");
+                }
                 
                 $update_stmt->bind_param("ssissi", 
                     $servico['name'],
@@ -281,7 +379,15 @@ if ($action === 'approve') {
             
         } else {
             // Serviço novo, apenas marcar como aprovado e limpar rejeição anterior
-            $stmt = $mysqli->prepare("UPDATE services SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            // Verificar se existe coluna status
+            $check_col = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+            $has_status = $check_col->num_rows > 0;
+            
+            if ($has_status) {
+                $stmt = $mysqli->prepare("UPDATE services SET status = 'approved', accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            } else {
+                $stmt = $mysqli->prepare("UPDATE services SET accept = 1, rejection_reason = NULL, rejected_by = NULL, reject_date = NULL, last_modification = NOW() WHERE id = ?");
+            }
             $stmt->bind_param("i", $id);
             
             if ($stmt->execute()) {

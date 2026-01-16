@@ -54,7 +54,16 @@ if ($action === 'approve') {
     
     $id = intval($data['id']);
     
-    $sql = "UPDATE services SET accept = 1, last_modification = NOW() WHERE id = ? AND active = 1";
+    // Atualizar accept e status se o campo existir
+    $sql = "UPDATE services SET accept = 1, last_modification = NOW()";
+    
+    // Verificar se campo status existe
+    $check_status = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+    if ($check_status->num_rows > 0) {
+        $sql .= ", status = 'approved'";
+    }
+    
+    $sql .= " WHERE id = ? AND active = 1";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param('i', $id);
     
@@ -190,8 +199,18 @@ if ($id) {
 } else {
     // Criar
     $user_id = $_SESSION['user_id'];
-    $sql = "INSERT INTO services (name, description, departamento, blocos, word_keys, active, accept, created_by) 
-            VALUES (?, ?, ?, ?, ?, 1, 0, ?)";
+    
+    // Verificar se campo status existe
+    $check_status = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+    $has_status = $check_status->num_rows > 0;
+    
+    if ($has_status) {
+        $sql = "INSERT INTO services (name, description, departamento, blocos, word_keys, active, accept, created_by, status) 
+                VALUES (?, ?, ?, ?, ?, 1, 0, ?, 'draft')";
+    } else {
+        $sql = "INSERT INTO services (name, description, departamento, blocos, word_keys, active, accept, created_by) 
+                VALUES (?, ?, ?, ?, ?, 1, 0, ?)";
+    }
     
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param('ssissi', $name, $description, $departamento, $blocos, $word_keys, $user_id);

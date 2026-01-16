@@ -1,0 +1,12 @@
+{
+    "version": "1.0.0",
+    "release_date": "2026-01-16",
+    "build": "20260116001",
+    "changelog": [
+        "Sistema de autenticação implementado",
+        "Sistema de instalação/desinstalação",
+        "Gerenciamento de configurações",
+        "Integração com Bootstrap 5",
+        "Sistema de tabs responsivo"
+    ]
+}

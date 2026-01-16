@@ -26,6 +26,13 @@ $blocos_query = "SELECT b.*, d.name as dept_name FROM blocos b
                  LEFT JOIN departaments d ON b.departamento = d.id
                  WHERE b.active = 1 ORDER BY b.last_modification DESC";
 $blocos = $mysqli->query($blocos_query);
+
+// Verificar se campo status existe, se não, usar fallback
+$status_field_exists = true;
+$test_query = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+if ($test_query->num_rows == 0) {
+    $status_field_exists = false;
+}
 ?>
 
 <!DOCTYPE html>
@@ -38,509 +45,6 @@ $blocos = $mysqli->query($blocos_query);
     <!-- Quill Editor -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-    <style>
-        .modal-step { display: none; }
-        .modal-step.active { display: block; }
-        
-        /* Loading Overlay para quando vem com parâmetro ?edit */
-        .page-loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .page-loading-overlay.active {
-            display: flex;
-        }
-        
-        .page-loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #e5e7eb;
-            border-top-color: #2563eb;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        .page-loading-text {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-        }
-        
-        .page-loading-subtext {
-            font-size: 14px;
-            color: #6b7280;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Ocultar conteúdo principal durante loading */
-        body.loading-tutorial .container {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        
-        /* Modal ocupa quase toda a tela */
-        #tutorialModal .modal-large {
-            max-width: 95vw !important;
-            width: 95vw !important;
-            max-height: 95vh !important;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #tutorialModal .modal-large #step2.active {
-            display: grid;
-            grid-template-columns: 400px 1fr 500px;
-            gap: 20px;
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .step-preview {
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 15px;
-            min-height: 200px;
-            background: #f9fafb;
-            overflow-y: auto;
-        }
-
-        /* Diagrama de fluxo - Estilo Árvore Genealógica */
-        .flow-diagram {
-            background: #ffffff;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            padding: 30px;
-            overflow: auto;
-        }
-        
-        .flow-tree {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-        
-        .flow-step-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .flow-step-node {
-            background: white;
-            border: 3px solid #2563eb;
-            border-radius: 12px;
-            padding: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .flow-step-node:hover {
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
-            transform: translateX(5px);
-        }
-        
-        .flow-step-node.active {
-            background: #eff6ff;
-            border-color: #1d4ed8;
-            border-width: 4px;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-        }
-        
-        .flow-step-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .flow-step-number {
-            background: #2563eb;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .flow-step-name {
-            font-weight: 600;
-            font-size: 16px;
-            color: #1f2937;
-        }
-        
-        .flow-questions {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 2px dashed #d1d5db;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .flow-question {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 2px solid #10b981;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .flow-question:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-        }
-        
-        /* Animação de transição de passo */
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .step-transition {
-            animation: slideInRight 0.3s ease-out;
-        }
-        
-        /* Animação de loading para botões */
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        /* Modal de Alerta Customizado */
-        .custom-alert-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s ease-out;
-        }
-        
-        .custom-alert-overlay.active {
-            display: flex;
-        }
-        
-        .custom-alert-modal {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 450px;
-            width: 90%;
-            padding: 32px;
-            text-align: center;
-            animation: slideInUp 0.3s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .custom-alert-icon {
-            font-size: 56px;
-            margin-bottom: 16px;
-            line-height: 1;
-        }
-        
-        .custom-alert-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 12px;
-        }
-        
-        .custom-alert-message {
-            font-size: 16px;
-            color: #6b7280;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            white-space: pre-line;
-        }
-        
-        .custom-alert-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-        
-        .custom-alert-btn {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            color: white;
-            border: none;
-            padding: 12px 32px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        
-        .custom-alert-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-        }
-        
-        .custom-alert-btn-secondary {
-            background: #f3f4f6;
-            color: #6b7280;
-            border: none;
-            padding: 12px 32px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .custom-alert-btn-secondary:hover {
-            background: #e5e7eb;
-            color: #374151;
-        }
-        
-        .flow-question-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-        }
-        
-        .flow-question-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #10b981;
-            color: white;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-        
-        .flow-question-text {
-            flex: 1;
-        }
-        
-        .flow-question-destination {
-            font-size: 11px;
-            color: #059669;
-            padding-left: 28px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .flow-question-destination::before {
-            content: '→';
-            font-weight: bold;
-        }
-        
-        .flow-question.error {
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-            border-color: #ef4444;
-        }
-        
-        .flow-question.error .flow-question-icon {
-            background: #ef4444;
-        }
-        
-        .flow-question.error .flow-question-destination {
-            color: #dc2626;
-        }
-
-        .media-preview-box {
-            margin-top: 10px;
-            border: 1px dashed #d1d5db;
-            border-radius: 4px;
-            padding: 10px;
-            min-height: 100px;
-            display: none;
-        }
-        
-        .media-preview-box.active {
-            display: block;
-        }
-        
-        .media-preview-box img,
-        .media-preview-box video {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 4px;
-        }
-
-        .question-destination {
-            margin-top: 10px;
-            padding: 10px;
-            background: #f9fafb;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 15px;
-        }
-
-        /* Preview do Passo Selecionado */
-        .step-viewer {
-            background: #ffffff;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .step-viewer-header {
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 15px;
-        }
-        
-        .step-viewer-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 5px;
-        }
-        
-        .step-viewer-subtitle {
-            font-size: 12px;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .step-viewer-content {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 20px;
-            min-height: 150px;
-        }
-        
-        .step-viewer-content h1,
-        .step-viewer-content h2,
-        .step-viewer-content h3 {
-            margin-top: 0;
-        }
-        
-        .step-viewer-media {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-        }
-        
-        .step-viewer-media img,
-        .step-viewer-media video {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 4px;
-        }
-        
-        .step-viewer-questions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .step-viewer-question {
-            background: #ffffff;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            padding: 12px 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .step-viewer-question:hover {
-            border-color: #2563eb;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
-            transform: translateX(5px);
-        }
-        
-        .step-viewer-question.success {
-            border-color: #10b981;
-            background: #f0fdf4;
-        }
-        
-        .step-viewer-question.error {
-            border-color: #ef4444;
-            background: #fef2f2;
-        }
-        
-        .step-viewer-empty {
-            text-align: center;
-            color: #9ca3af;
-            padding: 60px 20px;
-        }
-        
-        .step-viewer-empty-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-    </style>
 </head>
 <body>
     
@@ -578,6 +82,17 @@ $blocos = $mysqli->query($blocos_query);
                         <?php while($bloco = $blocos->fetch_assoc()): 
                             $numPassos = !empty($bloco['id_step']) ? count(explode(',', $bloco['id_step'])) : 0;
                             $hasRejection = !empty($bloco['rejection_reason']);
+                            
+                            // Determinar status
+                            $status = 'draft';
+                            if ($status_field_exists && isset($bloco['status'])) {
+                                $status = $bloco['status'];
+                            } else {
+                                // Fallback para sistemas sem campo status
+                                if ($hasRejection) $status = 'rejected';
+                                elseif ($bloco['accept']) $status = 'approved';
+                                else $status = 'pending';
+                            }
                         ?>
                         <tr>
                             <td><?= $bloco['id'] ?></td>
@@ -596,22 +111,30 @@ $blocos = $mysqli->query($blocos_query);
                             </td>
                             <td><?= $numPassos ?> passo(s)</td>
                             <td>
-                                <?php if ($hasRejection): ?>
-                                    <span class="status-badge" style="background: #fee2e2; color: #dc2626; border: 2px solid #dc2626;">
-                                        ❌ Não Aprovado
-                                    </span>
-                                <?php else: ?>
-                                    <span class="status-badge <?= $bloco['accept'] ? 'approved' : 'pending' ?>">
-                                        <?= $bloco['accept'] ? '✓ Aprovado' : '⏳ Pendente' ?>
-                                    </span>
-                                <?php endif; ?>
-                                <?php if (!$bloco['accept'] && $_SESSION['perfil'] == '1'): ?>
-                                    <button class="btn-icon btn-approve" onclick="approveTutorial(<?= $bloco['id'] ?>, event)" title="Aprovar" style="background: #10b981; color: white; margin-left: 5px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">✓ Aprovar</button>
+                                <?php 
+                                // Badges de status
+                                $status_badges = [
+                                    'draft' => ['icon' => '📝', 'text' => 'Rascunho', 'bg' => '#f3f4f6', 'color' => '#6b7280', 'border' => '#9ca3af'],
+                                    'pending' => ['icon' => '⏳', 'text' => 'Em Análise', 'bg' => '#fef3c7', 'color' => '#d97706', 'border' => '#f59e0b'],
+                                    'approved' => ['icon' => '✓', 'text' => 'Aprovado', 'bg' => '#d1fae5', 'color' => '#059669', 'border' => '#10b981'],
+                                    'rejected' => ['icon' => '❌', 'text' => 'Rejeitado', 'bg' => '#fee2e2', 'color' => '#dc2626', 'border' => '#dc2626']
+                                ];
+                                $badge = $status_badges[$status];
+                                ?>
+                                <span class="status-badge" style="background: <?= $badge['bg'] ?>; color: <?= $badge['color'] ?>; border: 2px solid <?= $badge['border'] ?>; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block;">
+                                    <?= $badge['icon'] ?> <?= $badge['text'] ?>
+                                </span>
+                                <br>
+                                <?php if ($status === 'pending' && $_SESSION['perfil'] == '1'): ?>
+                                    <button class="btn-icon btn-approve" onclick="approveTutorial(<?= $bloco['id'] ?>, event)" title="Aprovar" style="background: #10b981; color: white; margin-top: 5px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">✓ Aprovar</button>
                                 <?php endif; ?>
                             </td>
                             <td><?= date('d/m/Y H:i', strtotime($bloco['last_modification'])) ?></td>
                             <td class="actions-cell">
                                 <button class="btn-icon btn-edit" onclick='editTutorial(<?= $bloco['id'] ?>, event)' title="Editar">✏️</button>
+                                <?php if (in_array($status, ['draft', 'rejected'])): ?>
+                                    <button class="btn-icon btn-send" onclick="sendToReview('tutorial', <?= $bloco['id'] ?>, event)" title="Enviar para Análise" style="background: #3b82f6; color: white; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; margin-left: 3px;">📤 Enviar</button>
+                                <?php endif; ?>
                                 <button class="btn-icon btn-delete" onclick="deleteTutorial(<?= $bloco['id'] ?>, event)" title="Excluir">🗑️</button>
                             </td>
                         </tr>
@@ -628,7 +151,7 @@ $blocos = $mysqli->query($blocos_query);
             <div class="modal-header">
                 <h2 id="modalTitle">Novo Tutorial</h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <button type="button" class="btn-primary" onclick="finishTutorial()" id="btnSaveTutorial" style="display: none; padding: 8px 16px; font-size: 14px;">
+                    <button type="button" class="btn-primary" onclick="finishTutorial()" id="btnSaveTutorial" style="display: none;">
                         💾 Salvar Tutorial
                     </button>
                     <button class="btn-close" onclick="closeModal()">×</button>
@@ -680,8 +203,10 @@ $blocos = $mysqli->query($blocos_query);
                 </div>
 
                 <!-- Formulário de Edição de Passo -->
-                <div id="stepEditor" style="border: 2px solid #2563eb; padding: 20px; border-radius: 8px; background: white; flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
-                    <h3>✏️ <span id="editorTitle">Novo Passo</span></h3>
+                <div id="stepEditor" style="border: 2px solid #e5e7eb; padding: 20px; border-radius: 12px; background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%); flex: 1; overflow-y: auto; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                    <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">
+                        ✏️ <span id="editorTitle">Novo Passo</span>
+                    </h3>
                     <form id="stepForm" style="flex: 1; display: flex; flex-direction: column;">
                         <input type="hidden" id="currentStepId">
                         <input type="hidden" id="currentQuestionId">
@@ -719,8 +244,9 @@ $blocos = $mysqli->query($blocos_query);
                     
                     <!-- Botões de Ação -->
                     <div style="display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb;">
-                        <button type="button" class="btn-secondary" onclick="closeModal()" style="flex: 1;">Fechar</button>
-                        <button type="button" class="btn-primary" onclick="saveCurrentStep()" style="flex: 1;">💾 Salvar Passo</button>
+                        <button type="button" class="btn-secondary" onclick="limparEditor()" style="flex: 1;">✖️ Limpar</button>
+                        <button type="button" class="btn-success" onclick="criarNovoPasso()" id="btnCriarNovoPasso" style="flex: 1; background: #10b981; display: none;">➕ Criar Novo Passo</button>
+                        <button type="button" class="btn-primary" onclick="saveCurrentStep()" id="btnSalvarPasso" style="display: none;">💾 Salvar Alterações</button>
                     </div>
                 </div>
             </div>
@@ -1113,11 +639,22 @@ $blocos = $mysqli->query($blocos_query);
         function initializeStepEditor() {
             document.getElementById('editorTitle').textContent = 'Novo Passo';
             document.getElementById('currentStepId').value = '';
+            currentStepId = null;
             document.getElementById('stepName').value = '';
             document.getElementById('mediaPreview').classList.remove('active');
             document.getElementById('mediaPreview').innerHTML = '';
             document.getElementById('mediaFile').value = '';
             document.getElementById('uploadMediaBtn').style.display = 'none';
+            document.getElementById('removeMediaBtn').style.display = 'none';
+            
+            // Limpar editor Quill se já existir
+            if (quillEditor) {
+                quillEditor.setText('');
+            }
+            
+            // Mostrar botão de criar, esconder botão de salvar
+            document.getElementById('btnCriarNovoPasso').style.display = 'block';
+            document.getElementById('btnSalvarPasso').style.display = 'none';
             uploadedMediaFile = null;
             
             // Inicializar Quill Editor
@@ -1145,6 +682,34 @@ $blocos = $mysqli->query($blocos_query);
             } else {
                 quillEditor.setText('');
             }
+        }
+
+        // Função para limpar o editor e voltar ao estado inicial
+        function limparEditor() {
+            // Confirmar se está editando um passo existente
+            if (currentStepId) {
+                if (!confirm('Tem certeza que deseja descartar as alterações e criar um novo passo?')) {
+                    return;
+                }
+            }
+            
+            // Reinicializar o editor para modo de criação
+            initializeStepEditor();
+            
+            // Limpar preview do step
+            document.getElementById('stepHtmlPreview').innerHTML = '';
+            
+            // Limpar mídia preview se existir
+            const mediaPreview = document.getElementById('mediaPreview');
+            if (mediaPreview) {
+                mediaPreview.innerHTML = '';
+            }
+            
+            // Resetar variáveis globais
+            uploadedMediaFile = null;
+            uploadedMediaFilePath = null;
+            
+            console.log('Editor limpo e pronto para criar novo passo');
         }
 
         // ========== PREVIEW DE MÍDIA ==========
@@ -1633,6 +1198,73 @@ $blocos = $mysqli->query($blocos_query);
             }
         }
 
+        // ========== MOVER PERGUNTA ==========
+        async function moveQuestion(stepId, questionIndex, direction) {
+            try {
+                const step = tutorialSteps[stepId];
+                if (!step || !step.questions || step.questions.length < 2) {
+                    showAlert('Não há perguntas suficientes para reordenar', 'error');
+                    return;
+                }
+                
+                const questions = [...step.questions];
+                const newIndex = direction === 'up' ? questionIndex - 1 : questionIndex + 1;
+                
+                if (newIndex < 0 || newIndex >= questions.length) {
+                    showAlert('Movimento inválido', 'error');
+                    return;
+                }
+                
+                // Trocar posições
+                [questions[questionIndex], questions[newIndex]] = [questions[newIndex], questions[questionIndex]];
+                
+                // Extrair IDs na nova ordem
+                const questionIds = questions.map(q => q.id);
+                
+                console.log('Reordenando perguntas:', {
+                    stepId,
+                    questionIndex,
+                    direction,
+                    newIndex,
+                    questionIds
+                });
+                
+                const response = await fetch('../src/php/crud_tutoriais_flow.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'reorder_questions',
+                        step_id: stepId,
+                        question_ids: questionIds
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('Resultado da reordenação:', result);
+                
+                if (result.success) {
+                    // Atualizar ordem localmente
+                    step.questions = questions;
+                    
+                    // Re-renderizar o diagrama
+                    updateFlowDiagram();
+                    
+                    // Atualizar preview se estiver visualizando este step
+                    if (currentStepId == stepId) {
+                        updateStepViewer(step);
+                    }
+                    
+                    showAlert('Ordem atualizada com sucesso!', 'success');
+                } else {
+                    console.error('Erro ao reordenar:', result);
+                    showAlert(result.message || 'Erro ao reordenar perguntas', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao reordenar:', error);
+                showAlert('Erro ao reordenar perguntas: ' + error.message, 'error');
+            }
+        }
+
         // ========== SALVAR PASSO ATUAL COM PROGRESSO ==========
         async function saveCurrentStepWithProgress() {
             const stepId = document.getElementById('currentStepId').value;
@@ -1719,6 +1351,80 @@ $blocos = $mysqli->query($blocos_query);
             }
         }
         
+        // ========== CRIAR NOVO PASSO ==========
+        async function criarNovoPasso() {
+            // Garantir que o conteúdo do Quill está no textarea hidden
+            if (quillEditor) {
+                document.getElementById('stepHtml').value = quillEditor.root.innerHTML;
+            }
+            
+            const stepName = document.getElementById('stepName').value;
+            const stepHtml = document.getElementById('stepHtml').value;
+            
+            if (!stepName || !stepHtml) {
+                showAlert('Preencha o nome e o conteúdo do passo', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('btnCriarNovoPasso');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> Criando...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'save_step');
+                formData.append('tutorial_id', currentTutorialId);
+                // NÃO enviar step_id - forçar criação de novo passo
+                formData.append('name', stepName);
+                formData.append('html', stepHtml);
+                
+                if (uploadedMediaFile) {
+                    formData.append('mediaFile', uploadedMediaFile);
+                }
+                
+                const response = await fetch('../src/php/crud_tutoriais_flow.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const newStepId = result.step_id;
+                    
+                    // Atualizar para modo de edição
+                    document.getElementById('currentStepId').value = newStepId;
+                    currentStepId = newStepId;
+                    document.getElementById('editorTitle').textContent = 'Editando: ' + stepName;
+                    uploadedMediaFile = null;
+                    
+                    // Trocar botões: esconder criar, mostrar salvar
+                    document.getElementById('btnCriarNovoPasso').style.display = 'none';
+                    document.getElementById('btnSalvarPasso').style.display = 'block';
+                    
+                    showAlert('Passo criado com sucesso!', 'success');
+                    
+                    // Recarregar dados
+                    await loadTutorialSteps();
+                    updateFlowDiagram();
+                    if (tutorialSteps[newStepId]) {
+                        updateStepViewer(tutorialSteps[newStepId]);
+                    }
+                } else {
+                    showAlert(result.message || 'Erro ao criar passo', 'error');
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            } catch (error) {
+                console.error('Erro:', error);
+                showAlert('Erro ao criar passo', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
         // ========== SALVAR PASSO ATUAL ==========
         async function saveCurrentStep() {
             // Prevenir múltiplos salvamentos simultâneos
@@ -1727,10 +1433,20 @@ $blocos = $mysqli->query($blocos_query);
                 return null;
             }
             
+            const stepId = document.getElementById('currentStepId').value;
+            const finalStepId = stepId || currentStepId;
+            
+            // VERIFICAR SE É UM PASSO EXISTENTE
+            if (!finalStepId || finalStepId === '' || finalStepId === '0') {
+                showAlert('Use o botão "Criar Novo Passo" para criar um novo passo', 'warning');
+                return null;
+            }
+            
             isSaving = true;
             
-            const stepId = document.getElementById('currentStepId').value;
             const stepName = document.getElementById('stepName').value;
+            
+            console.log('SAVE STEP - Step ID atual:', finalStepId);
             
             // Garantir que o conteúdo do Quill está no textarea hidden
             if (quillEditor) {
@@ -1746,7 +1462,7 @@ $blocos = $mysqli->query($blocos_query);
             }
             
             // Feedback visual no botão
-            const saveBtn = event ? event.target : document.querySelector('button[onclick="saveCurrentStep()"]');
+            const saveBtn = document.getElementById('btnSalvarPasso');
             let originalText = '';
             if (saveBtn) {
                 originalText = saveBtn.innerHTML;
@@ -1758,10 +1474,7 @@ $blocos = $mysqli->query($blocos_query);
                 const formData = new FormData();
                 formData.append('action', 'save_step');
                 formData.append('tutorial_id', currentTutorialId);
-                // Apenas adicionar step_id se não estiver vazio (prevenir duplicação)
-                if (stepId && stepId.trim() !== '') {
-                    formData.append('step_id', stepId);
-                }
+                formData.append('step_id', finalStepId); // SEMPRE enviar step_id
                 formData.append('name', stepName);
                 formData.append('html', stepHtml);
                 
@@ -1900,7 +1613,7 @@ $blocos = $mysqli->query($blocos_query);
                 
                 if (step.questions && step.questions.length > 0) {
                     html += '<div class="flow-questions">';
-                    step.questions.forEach(q => {
+                    step.questions.forEach((q, qIndex) => {
                         const isError = q.text.toLowerCase().includes('erro') || 
                                       q.text.toLowerCase().includes('não') ||
                                       q.text.toLowerCase().includes('falha');
@@ -1908,8 +1621,11 @@ $blocos = $mysqli->query($blocos_query);
                         const destinationStepId = q.proximo;
                         
                         const isNextBlock = destinationStepId === 'next_block' || destinationStepId == 505;
+                        const isFirst = qIndex === 0;
+                        const isLast = qIndex === step.questions.length - 1;
+                        
                         html += `
-                            <div class="flow-question ${isError ? 'error' : ''}" style="position: relative; padding-right: 80px;">
+                            <div class="flow-question ${isError ? 'error' : ''}" style="position: relative; padding-right: 120px;">
                                 <div style="cursor: pointer;" onclick="${destinationStepId && !isNextBlock ? `event.stopPropagation(); loadStepInEditor(${destinationStepId})` : ''}" title="${destinationStepId && !isNextBlock ? 'Clique para abrir o passo destino' : ''}">
                                     <div class="flow-question-header">
                                         <div class="flow-question-icon">${isError ? '✗' : '✓'}</div>
@@ -1918,6 +1634,8 @@ $blocos = $mysqli->query($blocos_query);
                                     <div class="flow-question-destination">${q.destination_name || 'Próximo bloco'}</div>
                                 </div>
                                 <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;">
+                                    ${!isFirst ? `<button onclick="event.stopPropagation(); moveQuestion(${step.id}, ${qIndex}, 'up')" style="background: #6b7280; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;" title="Mover para cima">↑</button>` : ''}
+                                    ${!isLast ? `<button onclick="event.stopPropagation(); moveQuestion(${step.id}, ${qIndex}, 'down')" style="background: #6b7280; color: white; border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;" title="Mover para baixo">↓</button>` : ''}
                                     <button onclick="event.stopPropagation(); editQuestion(${step.id}, ${q.id})" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;" title="Editar pergunta">✏️</button>
                                     <button onclick="event.stopPropagation(); deleteQuestion(${step.id}, ${q.id})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;" title="Excluir pergunta">🗑️</button>
                                 </div>
@@ -1956,6 +1674,10 @@ $blocos = $mysqli->query($blocos_query);
             document.getElementById('currentStepId').value = stepId;
             document.getElementById('editorTitle').textContent = 'Editando: ' + step.name;
             document.getElementById('stepName').value = step.name;
+            
+            // Mostrar botão de salvar, esconder botão de criar
+            document.getElementById('btnCriarNovoPasso').style.display = 'none';
+            document.getElementById('btnSalvarPasso').style.display = 'block';
             
             // Limpar upload anterior
             document.getElementById('mediaFile').value = '';
@@ -2266,6 +1988,58 @@ $blocos = $mysqli->query($blocos_query);
                     btn.innerHTML = originalContent;
                 }
                 showAlert('Erro ao carregar tutorial para edição', 'error');
+            }
+        }
+
+        // ========== ENVIAR PARA ANÁLISE ==========
+        async function sendToReview(type, id, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const itemName = type === 'tutorial' ? 'tutorial' : 'serviço';
+            const confirmed = await showConfirm(`Deseja enviar este ${itemName} para análise? Os administradores serão notificados.`);
+            if (!confirmed) return;
+            
+            showConfirmLoading(`Enviando ${itemName} para análise...`);
+            
+            const btn = event.target;
+            btn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('type', type);
+                formData.append('id', id);
+                
+                const response = await fetch('../src/php/send_to_review.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showConfirmSuccess(result.message);
+                    
+                    setTimeout(() => {
+                        closeCustomConfirm();
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showConfirmError(result.message || 'Erro ao enviar para análise');
+                    btn.disabled = false;
+                    
+                    setTimeout(() => {
+                        closeCustomConfirm();
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Erro ao enviar para análise:', error);
+                showConfirmError('Erro ao enviar para análise');
+                btn.disabled = false;
+                
+                setTimeout(() => {
+                    closeCustomConfirm();
+                }, 3000);
             }
         }
 

@@ -108,17 +108,22 @@ $users = $mysqli->query($users_query);
                     <small>Será usado para fazer login no sistema</small>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Senha *</label>
+                <div class="form-group" id="passwordGroup" style="display: none;">
+                    <label for="password">Senha</label>
                     <input type="password" id="password" name="password" 
                            placeholder="Digite a senha" autocomplete="new-password">
-                    <small id="passwordHelp">Mínimo 6 caracteres</small>
+                    <small id="passwordHelp">Deixe em branco para manter a senha atual</small>
                 </div>
                 
-                <div class="form-group">
-                    <label for="confirmPassword">Confirmar Senha *</label>
+                <div class="form-group" id="confirmPasswordGroup" style="display: none;">
+                    <label for="confirmPassword">Confirmar Senha</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" 
                            placeholder="Digite a senha novamente">
+                </div>
+
+                <div class="alert alert-info" id="defaultPasswordAlert" style="display: block; margin: 15px 0; padding: 12px; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                    <strong>ℹ️ Senha Padrão:</strong> O usuário será criado com a senha padrão: <code style="background: #1e40af; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">Mudar@123</code>
+                    <br><small style="color: #1e40af;">O usuário será <strong>obrigado a trocar</strong> a senha no primeiro login.</small>
                 </div>
                 
                 <div class="form-group">
@@ -191,9 +196,14 @@ $users = $mysqli->query($users_query);
             document.getElementById('modalTitle').textContent = 'Novo Usuário';
             document.getElementById('userForm').reset();
             document.getElementById('userId').value = '';
-            document.getElementById('password').required = true;
-            document.getElementById('confirmPassword').required = true;
-            document.getElementById('passwordHelp').textContent = 'Mínimo 6 caracteres';
+            
+            // Ocultar campos de senha para novo usuário (senha padrão será usada)
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('confirmPasswordGroup').style.display = 'none';
+            document.getElementById('defaultPasswordAlert').style.display = 'block';
+            document.getElementById('password').required = false;
+            document.getElementById('confirmPassword').required = false;
+            
             document.getElementById('departamentoGroup').style.display = 'none';
             document.getElementById('departamento').required = false;
             document.getElementById('userModal').classList.add('active');
@@ -210,11 +220,17 @@ $users = $mysqli->query($users_query);
             document.getElementById('username').value = user.user;
             document.getElementById('perfil').value = user.perfil;
             document.getElementById('departamento').value = user.departamento || '';
+            
+            // Mostrar campos de senha para edição (opcional)
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('confirmPasswordGroup').style.display = 'block';
+            document.getElementById('defaultPasswordAlert').style.display = 'none';
             document.getElementById('password').value = '';
             document.getElementById('confirmPassword').value = '';
             document.getElementById('password').required = false;
             document.getElementById('confirmPassword').required = false;
             document.getElementById('passwordHelp').textContent = 'Deixe em branco para manter a senha atual';
+            
             toggleDepartamentoField();
             document.getElementById('userModal').classList.add('active');
         }
@@ -230,26 +246,27 @@ $users = $mysqli->query($users_query);
             const password = formData.get('password');
             const confirmPassword = formData.get('confirmPassword');
             const perfil = formData.get('perfil');
-            const departamento = formData.get('departamento');
             
-            // Validar departamento para perfil 3
-            if (perfil == '3' && !departamento) {
-                alert('❌ Departamento é obrigatório para perfil Departamento!');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Salvar';
-                return;
+            // Validar senha apenas se foi informada
+            if (password) {
+                if (password !== confirmPassword) {
+                    alert('❌ As senhas não coincidem!');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Salvar';
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    alert('❌ A senha deve ter no mínimo 6 caracteres!');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Salvar';
+                    return;
+                }
             }
             
-            // Validar senha
-            if (password && password !== confirmPassword) {
-                alert('❌ As senhas não coincidem!');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Salvar';
-                return;
-            }
-            
-            if (password && password.length < 6) {
-                alert('❌ A senha deve ter no mínimo 6 caracteres!');
+            // Validar departamento obrigatório para perfil 3
+            if (perfil == '3' && !formData.get('departamento')) {
+                alert('❌ Selecione um departamento para o perfil Departamento!');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Salvar';
                 return;

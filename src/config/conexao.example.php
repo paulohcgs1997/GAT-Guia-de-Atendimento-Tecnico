@@ -7,6 +7,10 @@ define('DB_NAME', 'gat');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
+// Chave de segurança para hash de sessão
+// Altere esta chave para um valor único e aleatório
+define('SYSTEM_SESSION_KEY', 'gat_secure_key_' . md5('gat_system'));
+
 // Evitar reconexão se já existir
 if (!isset($GLOBALS['mysqli']) || !($GLOBALS['mysqli'] instanceof mysqli)) {
     try {

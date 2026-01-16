@@ -86,7 +86,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Atualiza último login
             $mysqli->query("UPDATE usuarios SET last_login = NOW() WHERE id = $user_id");
             
-            echo json_encode(['success' => true]);
+            // Verificar se precisa trocar senha (primeiro login com senha padrão)
+            $checkForceChange = $mysqli->query("SHOW COLUMNS FROM usuarios LIKE 'force_password_change'");
+            $needsPasswordChange = false;
+            
+            if ($checkForceChange->num_rows > 0) {
+                // Coluna existe, verificar valor
+                $forceResult = $mysqli->query("SELECT force_password_change FROM usuarios WHERE id = $user_id");
+                $forceData = $forceResult->fetch_assoc();
+                $needsPasswordChange = ($forceData['force_password_change'] == 1);
+            }
+            
+            echo json_encode([
+                'success' => true, 
+                'force_password_change' => $needsPasswordChange
+            ]);
             exit;
         } else {
             error_log("Login - Password verification FAILED");
@@ -99,9 +113,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit;
 };
 function hash_login($user, $timestamp) {
-    include_once __DIR__ . '/../config/config.php';
+    // Usa a constante definida em conexao.php ou fallback
+    if (!defined('SYSTEM_SESSION_KEY')) {
+        require_once __DIR__ . '/../config/conexao.php';
+    }
+    
+    // Fallback caso a constante ainda não exista
+    $session_key = defined('SYSTEM_SESSION_KEY') ? SYSTEM_SESSION_KEY : 'gat_secure_key_' . md5('gat_system');
+    
     $id_user = $user;
-    $session_key = $key_system_session;
     
     // Cria um hash seguro combinando ID do usuário, chave e timestamp fixo
     $data_to_hash = $id_user . '|' . $session_key . '|' . $timestamp;
