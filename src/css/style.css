@@ -4420,6 +4420,87 @@ button:disabled {
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
+/* === SISTEMA DE GUIAS/TABS === */
+.tabs-container {
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.tabs-header {
+    display: flex;
+    gap: 0;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.tab-button {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+}
+
+.tab-button:hover {
+    color: #374151;
+    background: #f9fafb;
+}
+
+.tab-button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background: #eff6ff;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Form actions dentro das tabs */
+.tab-content .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.tab-content .form-actions button {
+    flex-shrink: 0;
+    min-width: 150px;
+}
+
+/* Responsivo para tabs */
+@media (max-width: 768px) {
+    .tab-button {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+    
+    .tab-content .form-actions {
+        flex-direction: column;
+    }
+    
+    .tab-content .form-actions button {
+        width: 100%;
+    }
+}
+
 .profile-form {
     background: var(--bg-primary);
     padding: calc(var(--spacing-2xl) + var(--spacing-sm));

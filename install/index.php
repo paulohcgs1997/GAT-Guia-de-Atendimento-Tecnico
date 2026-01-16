@@ -1,3 +1,10 @@
+<?php
+// Verifica se veio de um erro do uninstall
+$errorMessage = '';
+if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
+    $errorMessage = 'Sistema não está instalado. Não há nada para desinstalar.';
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -228,6 +235,11 @@
         <div class="header">
             <h1>🚀 Instalador GAT</h1>
             <p>Sistema de Gestão de Tutoriais</p>
+            <div style="margin-top: 15px;">
+                <a href="uninstall.php" style="color: rgba(255,255,255,0.9); text-decoration: none; font-size: 13px; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; display: inline-block; transition: all 0.3s;">
+                    🗑️ Desinstalar Sistema
+                </a>
+            </div>
         </div>
 
         <div class="content">
@@ -235,6 +247,12 @@
                 <div class="progress-bar-fill" id="progressBar" style="width: 33%"></div>
             </div>
 
+            
+            <?php if ($errorMessage): ?>
+            <div class="alert alert-error">
+                <?php echo htmlspecialchars($errorMessage); ?>
+            </div>
+            <?php endif; ?>
             <div class="step-indicator">
                 <div class="step-dot active" id="dot1"></div>
                 <div class="step-dot" id="dot2"></div>

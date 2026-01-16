@@ -99,13 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit;
 };
 function hash_login($user, $timestamp) {
-    // Usa a constante definida em conexao.php
+    // Usa a constante definida em conexao.php ou fallback
     if (!defined('SYSTEM_SESSION_KEY')) {
         require_once __DIR__ . '/../config/conexao.php';
     }
     
+    // Fallback caso a constante ainda não exista
+    $session_key = defined('SYSTEM_SESSION_KEY') ? SYSTEM_SESSION_KEY : 'gat_secure_key_' . md5('gat_system');
+    
     $id_user = $user;
-    $session_key = SYSTEM_SESSION_KEY;
     
     // Cria um hash seguro combinando ID do usuário, chave e timestamp fixo
     $data_to_hash = $id_user . '|' . $session_key . '|' . $timestamp;

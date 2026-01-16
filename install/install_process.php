@@ -25,6 +25,9 @@ define('DB_NAME', '{$dbname}');
 define('DB_USER', '{$user}');
 define('DB_PASS', '{$pass}');
 
+// Chave de segurança para hash de sessão
+define('SYSTEM_SESSION_KEY', 'gat_secure_key_' . md5('gat_system_' . '{$dbname}'));
+
 // Evitar reconexão se já existir
 if (!isset(\$GLOBALS['mysqli']) || !(\$GLOBALS['mysqli'] instanceof mysqli)) {
     try {
