@@ -656,19 +656,19 @@ button:active {
 }
 
 .btn-primary {
-    background: #1e3a8a;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     position: relative;
     overflow: hidden;
     width: auto;
