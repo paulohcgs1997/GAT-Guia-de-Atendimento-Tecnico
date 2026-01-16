@@ -32,6 +32,9 @@ try {
         'services' => [
             'status' => "ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft'"
         ],
+        'usuarios' => [
+            'force_password_change' => "TINYINT(1) DEFAULT 0"
+        ],
         'steps' => [
             // Adicione aqui novos campos para steps se necessário
         ],
@@ -81,15 +84,42 @@ try {
     
     // ========== GERAR LISTA DE ATUALIZAÇÕES DISPONÍVEIS ==========
     
-    if (count($response['missing_columns']) > 0) {
-        $response['updates_available'][] = [
+    $updates_map = [
+        'status_field' => [
             'id' => 'status_field',
             'name' => 'Sistema de Status para Tutoriais e Serviços',
             'description' => 'Adiciona campo status (draft, pending, approved, rejected) para melhor controle do fluxo de aprovação',
             'tables_affected' => ['blocos', 'services'],
             'file' => 'update_status_field.sql',
             'priority' => 'high'
-        ];
+        ],
+        'force_password_change' => [
+            'id' => 'force_password_change',
+            'name' => 'Sistema de Troca de Senha Obrigatória',
+            'description' => 'Adiciona campo force_password_change para forçar usuários a trocarem senha no primeiro login',
+            'tables_affected' => ['usuarios'],
+            'file' => 'add_force_password_change.sql',
+            'priority' => 'medium'
+        ]
+    ];
+    
+    // Verificar quais atualizações são necessárias
+    $missing_tables_set = array_flip($response['missing_tables']);
+    
+    foreach ($response['missing_columns'] as $missing) {
+        $table = $missing['table'];
+        $column = $missing['column'];
+        
+        // Mapear coluna para update
+        if ($column === 'status' && ($table === 'blocos' || $table === 'services')) {
+            if (!in_array($updates_map['status_field'], $response['updates_available'], true)) {
+                $response['updates_available'][] = $updates_map['status_field'];
+            }
+        } elseif ($column === 'force_password_change' && $table === 'usuarios') {
+            if (!in_array($updates_map['force_password_change'], $response['updates_available'], true)) {
+                $response['updates_available'][] = $updates_map['force_password_change'];
+            }
+        }
     }
     
     // ========== INFORMAÇÕES ADICIONAIS ==========

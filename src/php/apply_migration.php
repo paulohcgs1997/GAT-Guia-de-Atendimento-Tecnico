@@ -28,6 +28,10 @@ try {
         'status_field' => [
             'file' => '../../install/update_status_field.sql',
             'description' => 'Adiciona campo status'
+        ],
+        'force_password_change' => [
+            'file' => '../../install/add_force_password_change.sql',
+            'description' => 'Adiciona campo force_password_change para troca obrigatória de senha'
         ]
     ];
     

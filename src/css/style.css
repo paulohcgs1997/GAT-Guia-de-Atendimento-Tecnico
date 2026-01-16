@@ -3044,13 +3044,7 @@ button:disabled {
     margin-left: var(--spacing-sm);
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
+/* .tab-content removido - Bootstrap gerencia */
 
 .items-grid {
     display: grid;
@@ -4129,13 +4123,7 @@ button:disabled {
     border-bottom-color: #667eea;
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
+/* .tab-content removido - Bootstrap gerencia */
 
 .back-to-depts {
     background: #f3f4f6;
@@ -4462,17 +4450,12 @@ button:disabled {
     background: #eff6ff;
 }
 
-.tab-content {
-    display: none;
-    animation: fadeIn 0.3s ease-in;
-}
-
-.tab-content.active {
-    display: block;
-}
+/* CSS customizado de tabs removido - Bootstrap gerencia .tab-pane */
 
 /* Form actions dentro das tabs */
-.tab-content .form-actions {
+.tab-content .form-actions,
+.tab-pane .form-actions,
+.d-flex.gap-2 {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
@@ -4480,7 +4463,8 @@ button:disabled {
     flex-wrap: wrap;
 }
 
-.tab-content .form-actions button {
+.tab-content .form-actions button,
+.tab-pane .form-actions button {
     flex-shrink: 0;
     min-width: 150px;
 }
@@ -4492,11 +4476,13 @@ button:disabled {
         padding: 10px 12px;
     }
     
-    .tab-content .form-actions {
+    .tab-content .form-actions,
+    .tab-pane .form-actions {
         flex-direction: column;
     }
     
-    .tab-content .form-actions button {
+    .tab-content .form-actions button,
+    .tab-pane .form-actions button {
         width: 100%;
     }
 }
@@ -5589,13 +5575,7 @@ details[open] summary {
     margin-left: 8px;
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
+/* .tab-content removido - Bootstrap gerencia */
 
 .items-grid {
     display: grid;

@@ -129,6 +129,7 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php include_once PROJECT_ROOT . '/src/includes/head_config.php'; ?>
     <link rel="stylesheet" href="../src/css/style.css">
+    <title>Aprovações Pendentes - GAT</title>
 </head>
 <body>
     
@@ -137,14 +138,45 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
     <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
 
     <main>
-        <div class="approval-container">
-            <div class="page-header">
-                <h1>✅ Aprovações Pendentes</h1>
+        <div class="approval-container container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-3">✅ Aprovações Pendentes</h1>
+                    <p class="text-muted mb-4">Gerencie os itens que aguardam aprovação</p>
+                </div>
             </div>
 
-            <!-- Tutoriais Pendentes -->
-            <div class="approval-section">
-                <h2>📚 Tutoriais Pendentes</h2>
+            <!-- Sistema de Guias/Tabs -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-4" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tutoriais-tab" data-bs-toggle="tab" data-bs-target="#tab-tutoriais" type="button" role="tab">
+                                <i class="bi bi-book"></i> Tutoriais 
+                                <?php if ($tutoriais->num_rows > 0): ?>
+                                    <span class="badge bg-warning text-dark"><?= $tutoriais->num_rows ?></span>
+                                <?php endif; ?>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="servicos-tab" data-bs-toggle="tab" data-bs-target="#tab-servicos" type="button" role="tab">
+                                <i class="bi bi-tools"></i> Serviços 
+                                <?php if ($servicos->num_rows > 0): ?>
+                                    <span class="badge bg-warning text-dark"><?= $servicos->num_rows ?></span>
+                                <?php endif; ?>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Conteúdo das Guias -->
+            <div class="tab-content">
+
+            <!-- Guia: Tutoriais Pendentes -->
+            <div class="tab-pane fade show active" id="tab-tutoriais" role="tabpanel">
+                <div class="approval-section">
+                    <h2>📚 Tutoriais Pendentes</h2>
                 <?php if ($tutoriais->num_rows > 0): ?>
                     <?php while($tutorial = $tutoriais->fetch_assoc()): ?>
                         <div class="approval-item <?= $tutorial['is_clone'] ? 'is-update' : '' ?>">
@@ -189,11 +221,13 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
                         <div style="font-size: 14px;">Todos os tutoriais foram aprovados</div>
                     </div>
                 <?php endif; ?>
+                </div>
             </div>
 
-            <!-- Serviços Pendentes -->
-            <div class="approval-section">
-                <h2>🛠️ Serviços Pendentes (com Tutoriais Vinculados)</h2>
+            <!-- Guia: Serviços Pendentes -->
+            <div class="tab-pane fade" id="tab-servicos" role="tabpanel">
+                <div class="approval-section">
+                    <h2>🛠️ Serviços Pendentes</h2>
                 <?php if ($servicos->num_rows > 0): ?>
                     <?php while($servico = $servicos->fetch_assoc()): 
                         $tutoriaisVinculados = getTutoriaisNomes($mysqli, $servico['blocos']);
@@ -327,7 +361,10 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
                         <div style="font-size: 14px;">Todos os serviços foram aprovados</div>
                     </div>
                 <?php endif; ?>
+                </div>
             </div>
+
+            </div><!-- Fecha tab-content -->
         </div>
     </main>
 

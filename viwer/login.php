@@ -138,8 +138,13 @@ if (!isset($systemName)) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Redirecionar para o dashboard em caso de sucesso
-                    window.location.href = 'dashboard.php';
+                    // Verificar se precisa trocar senha
+                    if (data.force_password_change) {
+                        window.location.href = 'change_password.php';
+                    } else {
+                        // Redirecionar para o dashboard em caso de sucesso
+                        window.location.href = 'dashboard.php';
+                    }
                 } else {
                     // Mostrar formulário novamente em caso de erro
                     loginContainer.style.display = 'block';

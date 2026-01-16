@@ -31,8 +31,9 @@ while($bloco = $blocos_result->fetch_assoc()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Itens Reprovados - Gestão</title>
+    <?php include_once PROJECT_ROOT . '/src/includes/head_config.php'; ?>
     <link rel="stylesheet" href="../src/css/style.css">
+    <title>Itens Reprovados - GAT</title>
 </head>
 <body>
     <?php include_once PROJECT_ROOT . '/src/includes/header.php'; ?>
@@ -40,32 +41,52 @@ while($bloco = $blocos_result->fetch_assoc()) {
     <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
 
     <main>
-        <div class="reprovados-container">
-            <h1>📛 Itens Reprovados</h1>
-            <p style="color: #6b7280; margin-bottom: 20px;">Gerencie serviços e tutoriais que foram rejeitados e precisam de correção</p>
-
-            <div class="tabs-container">
-                <button class="tab active" data-tab="tutoriais">
-                    📚 Tutoriais
-                    <span class="tab-badge" id="tutoriaisBadge">0</span>
-                </button>
-                <button class="tab" data-tab="servicos">
-                    🛠️ Serviços
-                    <span class="tab-badge" id="servicosBadge">0</span>
-                </button>
+        <div class="reprovados-container container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-3">📛 Itens Reprovados</h1>
+                    <p class="text-muted mb-4">Gerencie serviços e tutoriais que foram rejeitados e precisam de correção</p>
+                </div>
             </div>
 
-            <div id="tutoriais-tab" class="tab-content active">
+            <!-- Sistema de Guias/Tabs com Bootstrap -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-4" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tutoriais-tab" data-bs-toggle="tab" data-bs-target="#tab-tutoriais" type="button" role="tab">
+                                <i class="bi bi-book"></i> Tutoriais 
+                                <span class="badge bg-danger" id="tutoriaisBadge">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="servicos-tab" data-bs-toggle="tab" data-bs-target="#tab-servicos" type="button" role="tab">
+                                <i class="bi bi-tools"></i> Serviços 
+                                <span class="badge bg-danger" id="servicosBadge">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Conteúdo das Guias -->
+            <div class="tab-content">
+
+            <!-- Guia: Tutoriais Reprovados -->
+            <div class="tab-pane fade show active" id="tab-tutoriais" role="tabpanel">
                 <div id="tutoriaisGrid" class="items-grid">
                     <!-- Tutoriais reprovados serão carregados aqui -->
                 </div>
             </div>
 
-            <div id="servicos-tab" class="tab-content">
+            <!-- Guia: Serviços Reprovados -->
+            <div class="tab-pane fade" id="tab-servicos" role="tabpanel">
                 <div id="servicosGrid" class="items-grid">
                     <!-- Serviços reprovados serão carregados aqui -->
                 </div>
             </div>
+
+            </div><!-- Fecha tab-content -->
         </div>
     </main>
 
@@ -196,23 +217,6 @@ while($bloco = $blocos_result->fetch_assoc()) {
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             loadRejectedItems();
-        });
-
-        // Tabs
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabName = this.dataset.tab;
-                
-                // Atualizar tabs
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Atualizar conteúdo
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabName + '-tab').classList.add('active');
-            });
         });
 
         // Carregar itens reprovados

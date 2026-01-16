@@ -15,6 +15,17 @@ async function loadConfigurations() {
             document.getElementById('system_email').value = configs.system_email || '';
             document.getElementById('system_phone').value = configs.system_phone || '';
             
+            // Preencher campos do GitHub (se existirem)
+            if (configs.github_repository) {
+                try {
+                    const githubData = JSON.parse(configs.github_repository);
+                    document.getElementById('github_owner').value = githubData.owner || '';
+                    document.getElementById('github_repo').value = githubData.repo || '';
+                } catch (e) {
+                    console.log('Sem configuração de GitHub ou formato inválido');
+                }
+            }
+            
             // Mostrar preview do logo
             if (configs.system_logo) {
                 const logoImg = document.getElementById('logoImg');
@@ -72,6 +83,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(this);
         formData.append('action', 'save_config');
+        
+        // Adicionar configuração do GitHub se preenchida
+        const githubOwner = document.getElementById('github_owner').value;
+        const githubRepo = document.getElementById('github_repo').value;
+        
+        if (githubOwner && githubRepo) {
+            formData.append('github_repository', JSON.stringify({
+                owner: githubOwner,
+                repo: githubRepo
+            }));
+        }
         
         const loadingOverlay = document.getElementById('loadingOverlay');
         loadingOverlay.style.display = 'flex';

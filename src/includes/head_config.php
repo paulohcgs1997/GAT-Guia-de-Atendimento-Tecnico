@@ -27,3 +27,9 @@ $system_favicon = getSystemConfig('system_favicon', '');
 <?php if (!empty($system_favicon)): ?>
 <link rel="icon" type="image/x-icon" href="<?php echo htmlspecialchars($system_favicon); ?>">
 <?php endif; ?>
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<!-- Bootstrap 5 JS Bundle (inclui Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>

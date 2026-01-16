@@ -20,34 +20,52 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
 
     <main>
-        <div class="gestao-container">
-            <h1>⚙️ Configurações do Sistema</h1>
-            <p style="color: #666; margin-bottom: 30px;">Personalize as informações do sistema</p>
+        <div class="gestao-container container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-3">⚙️ Configurações do Sistema</h1>
+                    <p class="text-muted mb-4">Personalize as informações do sistema</p>
+                </div>
+            </div>
 
             <div class="loading-overlay" id="loadingOverlay" style="display: none;">
                 <div class="loading-spinner"></div>
                 <p>Salvando configurações...</p>
             </div>
 
-            <!-- Sistema de Guias/Tabs -->
-            <div class="tabs-container">
-                <div class="tabs-header">
-                    <button class="tab-button active" data-tab="info">
-                        📋 Informações do Sistema
-                    </button>
-                    <button class="tab-button" data-tab="visual">
-                        🎨 Identidade Visual
-                    </button>
-                    <button class="tab-button" data-tab="database">
-                        🔍 Verificador de BD
-                    </button>
+            <!-- Sistema de Guias/Tabs com Bootstrap -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
+                                <i class="bi bi-clipboard-data"></i> Informações do Sistema
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="visual-tab" data-bs-toggle="tab" data-bs-target="#tab-visual" type="button" role="tab">
+                                <i class="bi bi-palette"></i> Identidade Visual
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="database-tab" data-bs-toggle="tab" data-bs-target="#tab-database" type="button" role="tab">
+                                <i class="bi bi-database-check"></i> Verificador de BD
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="updates-tab" data-bs-toggle="tab" data-bs-target="#tab-updates" type="button" role="tab">
+                                <i class="bi bi-cloud-download"></i> Atualizações
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- Conteúdo das Guias -->
+            <!-- Conteúdo das Guias com Bootstrap -->
+            <div class="tab-content" id="configTabContent">
             
             <!-- Guia: Informações do Sistema -->
-            <div class="tab-content active" id="tab-info">
+            <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
                 <form id="configForm" class="config-form">
                     <div class="config-section">
                         <h3>📋 Informações Gerais</h3>
@@ -81,19 +99,52 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                         </div>
                     </div>
 
-                    <div class="form-actions">
+                    <div class="config-section">
+                        <h3>🔗 Repositório GitHub (Atualizações)</h3>
+                        <p class="text-muted small mb-3">Configure o repositório GitHub para habilitar atualizações automáticas. Deixe em branco para detecção automática.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="github_owner">Usuário/Organização</label>
+                                    <input type="text" id="github_owner" name="github_owner" 
+                                           placeholder="ex: microsoft">
+                                    <small class="text-muted">Nome do usuário ou organização no GitHub</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="github_repo">Nome do Repositório</label>
+                                    <input type="text" id="github_repo" name="github_repo" 
+                                           placeholder="ex: vscode">
+                                    <small class="text-muted">Nome do repositório (sem .git)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info d-flex align-items-start mt-2">
+                            <i class="bi bi-info-circle me-2 mt-1"></i>
+                            <div class="small">
+                                <strong>Detecção Automática:</strong> Se você clonou este projeto de um repositório Git, 
+                                o sistema tentará detectar automaticamente o repositório de origem. Você só precisa 
+                                preencher estes campos se quiser apontar para um repositório diferente.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end mt-4">
                         <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
-                            ↩️ Cancelar
+                            <i class="bi bi-arrow-left"></i> Cancelar
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            💾 Salvar Configurações
+                            <i class="bi bi-save"></i> Salvar Configurações
                         </button>
                     </div>
                 </form>
             </div>
 
             <!-- Guia: Identidade Visual -->
-            <div class="tab-content" id="tab-visual">
+            <div class="tab-pane fade" id="tab-visual" role="tabpanel">
                 <form id="visualForm" class="config-form">
                     <div class="config-section">
                         <h3>🎨 Identidade Visual</h3>
@@ -123,19 +174,19 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                         </div>
                     </div>
 
-                    <div class="form-actions">
+                    <div class="d-flex gap-2 justify-content-end mt-4">
                         <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
-                            ↩️ Cancelar
+                            <i class="bi bi-arrow-left"></i> Cancelar
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            💾 Salvar Imagens
+                            <i class="bi bi-save"></i> Salvar Imagens
                         </button>
                     </div>
                 </form>
             </div>
 
             <!-- Guia: Verificador de Banco de Dados -->
-            <div class="tab-content" id="tab-database">
+            <div class="tab-pane fade" id="tab-database" role="tabpanel">
                 <div class="config-section" id="databaseChecker" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 8px; padding: 20px;">
                     <h3>🔍 Verificador de Banco de Dados</h3>
                     <p style="color: #6b7280; margin-bottom: 20px;">Verifica se todas as atualizações necessárias foram aplicadas</p>
@@ -147,12 +198,12 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 10px;">
+                    <div class="d-flex gap-2">
                         <button type="button" class="btn btn-primary" onclick="checkDatabase()" id="btnCheckDb">
-                            🔍 Verificar Agora
+                            <i class="bi bi-search"></i> Verificar Agora
                         </button>
                         <button type="button" class="btn btn-success" onclick="applyUpdates()" id="btnApplyUpdates" style="display: none;">
-                            ⚡ Aplicar Atualizações
+                            <i class="bi bi-lightning-charge"></i> Aplicar Atualizações
                         </button>
                     </div>
                     
@@ -160,6 +211,65 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 </div>
             </div>
 
+            <!-- Guia: Atualizações do Sistema -->
+            <div class="tab-pane fade" id="tab-updates" role="tabpanel">
+                <div class="config-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; border-radius: 8px; padding: 20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h3 class="mb-2">
+                                <i class="bi bi-cloud-download"></i> Atualizador de Sistema
+                            </h3>
+                            <p class="text-muted mb-0">Mantenha seu sistema atualizado com as últimas melhorias do GitHub</p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success" onclick="checkSystemUpdates()" id="btnCheckUpdates">
+                                <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div id="updateCheckResult">
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="bi bi-info-circle-fill me-2" style="font-size: 24px;"></i>
+                            <div>
+                                Clique em <strong>"Verificar Atualizações"</strong> para checar se há novas versões disponíveis no GitHub.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="bi bi-shield-check"></i> Funcionalidades do Atualizador
+                                </h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Verificação Automática:</strong> Conecta-se ao GitHub para buscar novas versões
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Backup Automático:</strong> Cria backup completo antes de qualquer atualização
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Changelog Integrado:</strong> Visualize todas as mudanças antes de atualizar
+                                    </li>
+                                    <li class="mb-0">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Instalação Segura:</strong> Preserva configurações e uploads existentes
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            </div><!-- Fecha tab-content Bootstrap -->
         </div>
     </main>
 
@@ -167,9 +277,11 @@ check_permission_admin(); // Apenas admin pode alterar configurações
         <p>Sistema em desenvolvimento</p>
     </footer>
 
-    <script src="../src/js/config-tabs.js"></script>
+    <!-- Scripts customizados -->
     <script src="../src/js/config-database.js"></script>
     <script src="../src/js/config-system.js"></script>
+    <script src="../src/js/system-updater.js"></script>
+    <!-- Bootstrap cuida da navegação das tabs automaticamente -->
 </body>
 
 </html>

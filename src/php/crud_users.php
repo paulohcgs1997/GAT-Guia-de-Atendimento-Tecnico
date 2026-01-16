@@ -141,12 +141,12 @@ if ($id) {
 } else {
     // ========== CRIAR NOVO USUÁRIO ==========
     
-    if (empty($password)) {
-        echo json_encode(['success' => false, 'message' => 'Senha é obrigatória para novos usuários']);
-        exit;
-    }
+    // Definir senha padrão se não foi fornecida
+    $defaultPassword = 'Mudar@123';
+    $finalPassword = !empty($password) ? $password : $defaultPassword;
+    $forcePasswordChange = empty($password) ? 1 : 0; // Força troca se usou senha padrão
     
-    if (strlen($password) < 6) {
+    if (strlen($finalPassword) < 6) {
         echo json_encode(['success' => false, 'message' => 'A senha deve ter no mínimo 6 caracteres']);
         exit;
     }
@@ -163,23 +163,34 @@ if ($id) {
         exit;
     }
     
-    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+    $passwordHash = password_hash($finalPassword, PASSWORD_DEFAULT);
     
-    error_log("Creating user - Username: $username, Perfil: $perfil, Departamento: $departamento");
-    error_log("Creating user - Password hash: $passwordHash");
+    // Verificar se coluna force_password_change existe
+    $checkColumn = $mysqli->query("SHOW COLUMNS FROM usuarios LIKE 'force_password_change'");
+    $hasColumn = $checkColumn->num_rows > 0;
     
-    $sql = "INSERT INTO usuarios (user, password, perfil, departamento, active) 
-            VALUES (?, ?, ?, ?, 1)";
-    
-    $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param('ssii', $username, $passwordHash, $perfil, $departamento);
+    if ($hasColumn) {
+        $sql = "INSERT INTO usuarios (user, password, perfil, departamento, active, force_password_change) 
+                VALUES (?, ?, ?, ?, 1, ?)";
+        
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param('ssiii', $username, $passwordHash, $perfil, $departamento, $forcePasswordChange);
+    } else {
+        // Fallback para BD sem a coluna
+        $sql = "INSERT INTO usuarios (user, password, perfil, departamento, active) 
+                VALUES (?, ?, ?, ?, 1)";
+        
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param('ssii', $username, $passwordHash, $perfil, $departamento);
+    }
     
     if ($stmt->execute()) {
-        error_log("User created successfully - ID: " . $stmt->insert_id);
-        echo json_encode(['success' => true, 'message' => 'Usuário criado com sucesso']);
+        $message = empty($password) 
+            ? "Usuário criado com sucesso! Senha padrão: $defaultPassword (será solicitada alteração no primeiro login)" 
+            : 'Usuário criado com sucesso';
+        echo json_encode(['success' => true, 'message' => $message]);
     } else {
-        error_log("Failed to create user - Error: " . $stmt->error);
-        echo json_encode(['success' => false, 'message' => 'Erro ao criar usuário']);
+        echo json_encode(['success' => false, 'message' => 'Erro ao criar usuário: ' . $stmt->error]);
     }
 }
 ?>

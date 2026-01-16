@@ -3,7 +3,21 @@ include_once("includes.php");
 check_login();
 check_permission_viewer();
 
-
+// Verificar se precisa trocar senha (proteção caso alguém acesse direto)
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $checkForce = $mysqli->query("SHOW COLUMNS FROM usuarios LIKE 'force_password_change'");
+    
+    if ($checkForce->num_rows > 0) {
+        $result = $mysqli->query("SELECT force_password_change FROM usuarios WHERE id = $user_id");
+        $userData = $result->fetch_assoc();
+        
+        if ($userData && $userData['force_password_change'] == 1) {
+            header('Location: change_password.php');
+            exit;
+        }
+    }
+}
 
 // Departamentos serão carregados via AJAX
 ?>
