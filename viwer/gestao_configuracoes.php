@@ -20,85 +20,298 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
 
     <main>
-        <div class="gestao-container">
-            <h1>⚙️ Configurações do Sistema</h1>
-            <p style="color: #666; margin-bottom: 30px;">Personalize as informações do sistema</p>
+        <div class="gestao-container container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-3">⚙️ Configurações do Sistema</h1>
+                    <p class="text-muted mb-4">Personalize as informações do sistema</p>
+                </div>
+            </div>
 
-            <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-overlay" id="loadingOverlay" style="display: none;">
                 <div class="loading-spinner"></div>
                 <p>Salvando configurações...</p>
             </div>
 
-            <form id="configForm" class="config-form">
-                <div class="config-section">
-                    <h3>📋 Informações Gerais</h3>
-                    
-                    <div class="form-group">
-                        <label for="system_name">Nome do Sistema *</label>
-                        <input type="text" id="system_name" name="system_name" required 
-                               placeholder="Ex: Sistema de Gestão Empresarial">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="system_description">Descrição</label>
-                        <textarea id="system_description" name="system_description" rows="3" 
-                                  placeholder="Breve descrição do sistema"></textarea>
-                    </div>
+            <!-- Sistema de Guias/Tabs com Bootstrap -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
+                                <i class="bi bi-clipboard-data"></i> Informações do Sistema
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="visual-tab" data-bs-toggle="tab" data-bs-target="#tab-visual" type="button" role="tab">
+                                <i class="bi bi-palette"></i> Identidade Visual
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="database-tab" data-bs-toggle="tab" data-bs-target="#tab-database" type="button" role="tab">
+                                <i class="bi bi-database-check"></i> Verificador de BD
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="updates-tab" data-bs-toggle="tab" data-bs-target="#tab-updates" type="button" role="tab">
+                                <i class="bi bi-cloud-download"></i> Atualizações
+                            </button>
+                        </li>
+                    </ul>
                 </div>
+            </div>
 
-                <div class="config-section">
-                    <h3>🎨 Identidade Visual</h3>
-                    
-                    <div class="form-group">
-                        <label for="system_logo">Logotipo do Sistema</label>
-                        <div class="image-upload-container">
-                            <div class="image-preview" id="logoPreview">
-                                <img id="logoImg" src="" alt="Logo" style="display: none; max-width: 200px; max-height: 100px;">
-                                <span class="preview-placeholder">Nenhuma imagem selecionada</span>
-                            </div>
-                            <input type="file" id="system_logo" name="system_logo" accept="image/*">
-                            <small>Formato recomendado: PNG com fundo transparente, 300x100px</small>
+            <!-- Conteúdo das Guias com Bootstrap -->
+            <div class="tab-content" id="configTabContent">
+            
+            <!-- Guia: Informações do Sistema -->
+            <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+                <form id="configForm" class="config-form">
+                    <div class="config-section">
+                        <h3>📋 Informações Gerais</h3>
+                        
+                        <div class="form-group">
+                            <label for="system_name">Nome do Sistema *</label>
+                            <input type="text" id="system_name" name="system_name" required 
+                                   placeholder="Ex: Sistema de Gestão Empresarial">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="system_description">Descrição</label>
+                            <textarea id="system_description" name="system_description" rows="3" 
+                                      placeholder="Breve descrição do sistema"></textarea>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="system_favicon">Favicon</label>
-                        <div class="image-upload-container">
-                            <div class="image-preview" id="faviconPreview">
-                                <img id="faviconImg" src="" alt="Favicon" style="display: none; max-width: 64px; max-height: 64px;">
-                                <span class="preview-placeholder">Nenhuma imagem selecionada</span>
+                    <div class="config-section">
+                        <h3>📞 Contato</h3>
+                        
+                        <div class="form-group">
+                            <label for="system_email">E-mail</label>
+                            <input type="email" id="system_email" name="system_email" 
+                                   placeholder="contato@empresa.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="system_phone">Telefone</label>
+                            <input type="text" id="system_phone" name="system_phone" 
+                                   placeholder="(00) 0000-0000">
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3>🔗 Repositório GitHub (Atualizações)</h3>
+                        <p class="text-muted small mb-3">Configure o repositório GitHub para habilitar atualizações automáticas. Deixe em branco para detecção automática.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="github_owner">Usuário/Organização</label>
+                                    <input type="text" id="github_owner" name="github_owner" 
+                                           placeholder="ex: microsoft">
+                                    <small class="text-muted">Nome do usuário ou organização no GitHub</small>
+                                </div>
                             </div>
-                            <input type="file" id="system_favicon" name="system_favicon" accept="image/*">
-                            <small>Formato recomendado: ICO ou PNG, 32x32px ou 64x64px</small>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="github_repo">Nome do Repositório</label>
+                                    <input type="text" id="github_repo" name="github_repo" 
+                                           placeholder="ex: vscode">
+                                    <small class="text-muted">Nome do repositório (sem .git)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info d-flex align-items-start mt-2">
+                            <i class="bi bi-info-circle me-2 mt-1"></i>
+                            <div class="small">
+                                <strong>Detecção Automática:</strong> Se você clonou este projeto de um repositório Git, 
+                                o sistema tentará detectar automaticamente o repositório de origem. Você só precisa 
+                                preencher estes campos se quiser apontar para um repositório diferente.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Salvar Configurações
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Guia: Identidade Visual -->
+            <div class="tab-pane fade" id="tab-visual" role="tabpanel">
+                <form id="visualForm" class="config-form">
+                    <div class="config-section">
+                        <h3>🎨 Identidade Visual</h3>
+                        
+                        <div class="form-group">
+                            <label for="system_logo">Logotipo do Sistema</label>
+                            <div class="image-upload-container">
+                                <div class="image-preview" id="logoPreview">
+                                    <img id="logoImg" src="" alt="Logo" style="display: none; max-width: 200px; max-height: 100px;">
+                                    <span class="preview-placeholder">Nenhuma imagem selecionada</span>
+                                </div>
+                                <input type="file" id="system_logo" name="system_logo" accept="image/*">
+                                <small>Formato recomendado: PNG com fundo transparente, 300x100px</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="system_favicon">Favicon</label>
+                            <div class="image-upload-container">
+                                <div class="image-preview" id="faviconPreview">
+                                    <img id="faviconImg" src="" alt="Favicon" style="display: none; max-width: 64px; max-height: 64px;">
+                                    <span class="preview-placeholder">Nenhuma imagem selecionada</span>
+                                </div>
+                                <input type="file" id="system_favicon" name="system_favicon" accept="image/*">
+                                <small>Formato recomendado: ICO ou PNG, 32x32px ou 64x64px</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Salvar Imagens
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Guia: Verificador de Banco de Dados -->
+            <div class="tab-pane fade" id="tab-database" role="tabpanel">
+                <div class="config-section" id="databaseChecker" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 8px; padding: 20px;">
+                    <h3>🔍 Verificador de Banco de Dados</h3>
+                    <p style="color: #6b7280; margin-bottom: 20px;">Verifica se todas as atualizações necessárias foram aplicadas</p>
+                    
+                    <div id="dbCheckResult" style="margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                            <span style="font-size: 24px;">⏳</span>
+                            <span style="color: #6b7280;">Clique em "Verificar Agora" para checar o banco de dados</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" onclick="checkDatabase()" id="btnCheckDb">
+                            <i class="bi bi-search"></i> Verificar Agora
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="applyUpdates()" id="btnApplyUpdates" style="display: none;">
+                            <i class="bi bi-lightning-charge"></i> Aplicar Atualizações
+                        </button>
+                    </div>
+                    
+                    <div id="updatesList" style="margin-top: 20px; display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Guia: Atualizações do Sistema -->
+            <div class="tab-pane fade" id="tab-updates" role="tabpanel">
+                <div class="config-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; border-radius: 8px; padding: 20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h3 class="mb-2">
+                                <i class="bi bi-cloud-download"></i> Atualizador de Sistema
+                            </h3>
+                            <p class="text-muted mb-0">Mantenha seu sistema atualizado com as últimas melhorias do GitHub</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="showGithubConfig()">
+                                <i class="bi bi-gear"></i> Configurar Repositório
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="checkSystemUpdates()" id="btnCheckUpdates">
+                                <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuração do Repositório GitHub -->
+                    <div id="githubConfigSection" style="display: none; margin-bottom: 20px;">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">⚙️ Configurar Repositório GitHub</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="githubConfigForm" onsubmit="saveGithubConfig(event)">
+                                    <div class="alert alert-info mb-3">
+                                        <strong>💡 Dica:</strong> Cole a URL do seu repositório GitHub e o sistema configurará automaticamente.
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="github_url" class="form-label">URL do Repositório GitHub *</label>
+                                        <input type="text" class="form-control form-control-lg" id="github_url" name="github_url" required
+                                               placeholder="https://github.com/usuario/repositorio">
+                                        <small class="text-muted">Cole a URL do GitHub (exemplo: https://github.com/paulohcgs1997/GAT-Guia-de-Atendimento-Tecnico)</small>
+                                    </div>
+                                    
+                                    <div id="urlDetectionResult" style="display: none; margin-bottom: 15px;">
+                                        <div class="alert alert-success">
+                                            <strong>✅ Repositório Detectado:</strong><br>
+                                            <span id="detectedInfo"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save"></i> Salvar e Testar Repositório
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="hideGithubConfig()">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div id="updateCheckResult">
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="bi bi-info-circle-fill me-2" style="font-size: 24px;"></i>
+                            <div>
+                                Clique em <strong>"Verificar Atualizações"</strong> para checar se há novas versões disponíveis no GitHub.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="bi bi-shield-check"></i> Funcionalidades do Atualizador
+                                </h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Verificação Automática:</strong> Conecta-se ao GitHub para buscar novas versões
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Backup Automático:</strong> Cria backup completo antes de qualquer atualização
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Changelog Integrado:</strong> Visualize todas as mudanças antes de atualizar
+                                    </li>
+                                    <li class="mb-0">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <strong>Instalação Segura:</strong> Preserva configurações e uploads existentes
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="config-section">
-                    <h3>📞 Contato</h3>
-                    
-                    <div class="form-group">
-                        <label for="system_email">E-mail</label>
-                        <input type="email" id="system_email" name="system_email" 
-                               placeholder="contato@empresa.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="system_phone">Telefone</label>
-                        <input type="text" id="system_phone" name="system_phone" 
-                               placeholder="(00) 0000-0000">
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="window.location.href='gestao.php'">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-primary">
-                        💾 Salvar Configurações
-                    </button>
-                </div>
-            </form>
+            </div>
+            
+            </div><!-- Fecha tab-content Bootstrap -->
         </div>
     </main>
 
@@ -106,108 +319,12 @@ check_permission_admin(); // Apenas admin pode alterar configurações
         <p>Sistema em desenvolvimento</p>
     </footer>
 
-    <script>
-        // Carregar configurações atuais
-        async function loadConfigurations() {
-            try {
-                const response = await fetch('../src/php/get_configuracoes.php');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const configs = data.configs;
-                    
-                    // Preencher campos de texto
-                    document.getElementById('system_name').value = configs.system_name;
-                    document.getElementById('system_description').value = configs.system_description;
-                    document.getElementById('system_email').value = configs.system_email;
-                    document.getElementById('system_phone').value = configs.system_phone;
-                    
-                    // Mostrar preview do logo
-                    if (configs.system_logo) {
-                        const logoImg = document.getElementById('logoImg');
-                        logoImg.src = configs.system_logo;
-                        logoImg.style.display = 'block';
-                        document.querySelector('#logoPreview .preview-placeholder').style.display = 'none';
-                    }
-                    
-                    // Mostrar preview do favicon
-                    if (configs.system_favicon) {
-                        const faviconImg = document.getElementById('faviconImg');
-                        faviconImg.src = configs.system_favicon;
-                        faviconImg.style.display = 'block';
-                        document.querySelector('#faviconPreview .preview-placeholder').style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao carregar configurações:', error);
-            }
-        }
-        
-        // Preview de imagem ao selecionar arquivo
-        document.getElementById('system_logo').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const logoImg = document.getElementById('logoImg');
-                    logoImg.src = event.target.result;
-                    logoImg.style.display = 'block';
-                    document.querySelector('#logoPreview .preview-placeholder').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        document.getElementById('system_favicon').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const faviconImg = document.getElementById('faviconImg');
-                    faviconImg.src = event.target.result;
-                    faviconImg.style.display = 'block';
-                    document.querySelector('#faviconPreview .preview-placeholder').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        // Salvar configurações
-        document.getElementById('configForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            formData.append('action', 'save_config');
-            
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            loadingOverlay.style.display = 'flex';
-            
-            try {
-                const response = await fetch('../src/php/crud_configuracoes.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    // Recarregar a página para mostrar as mudanças
-                    window.location.reload();
-                } else {
-                    alert('❌ ' + data.message);
-                }
-            } catch (error) {
-                console.error('Erro ao salvar configurações:', error);
-                alert('❌ Erro ao salvar configurações');
-            } finally {
-                loadingOverlay.style.display = 'none';
-            }
-        });
-        
-        // Carregar configurações ao iniciar
-        document.addEventListener('DOMContentLoaded', loadConfigurations);
-    </script>
+    <!-- Scripts customizados -->
+    <script src="../src/js/config-database.js"></script>
+    <script src="../src/js/config-system.js"></script>
+    <script src="../src/js/system-updater.js"></script>
+    <script src="../src/js/github-config.js"></script>
+    <!-- Bootstrap cuida da navegação das tabs automaticamente -->
 </body>
 
 </html>

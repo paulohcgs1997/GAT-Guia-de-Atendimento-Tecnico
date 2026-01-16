@@ -170,6 +170,20 @@
                 // Abrir viwer.php em nova janela
                 const novaJanela = window.open('viwer.php', 'viwer', 'width=477,height=946');
                 
+                // Verificar se o pop-up foi bloqueado
+                if (!novaJanela || novaJanela.closed || typeof novaJanela.closed === 'undefined') {
+                    mostrarAvisoPopupBloqueado();
+                    
+                    // Limpar estados
+                    if (elementoEnviando) {
+                        elementoEnviando.classList.remove('enviando');
+                        elementoEnviando = null;
+                    }
+                    aguardandoConfirmacao = false;
+                    servicoPendente = null;
+                    return;
+                }
+                
                 // Reenviar múltiplas vezes para garantir recebimento
                 let tentativas = 0;
                 const maxTentativas = 5;
@@ -201,3 +215,126 @@
             }
         }, 800); // Timeout de 800ms
     }
+
+    // Função para mostrar aviso de pop-up bloqueado
+    function mostrarAvisoPopupBloqueado() {
+        // Remover modal anterior se existir
+        const modalExistente = document.getElementById('popupBlockedModal');
+        if (modalExistente) {
+            modalExistente.remove();
+        }
+        
+        // Detectar navegador
+        const userAgent = navigator.userAgent.toLowerCase();
+        let navegador = 'desconhecido';
+        let instrucoes = '';
+        
+        if (userAgent.includes('chrome') && !userAgent.includes('edge')) {
+            navegador = 'Chrome';
+            instrucoes = `
+                <ol>
+                    <li>Clique no ícone <strong>🔒</strong> (cadeado) na barra de endereço</li>
+                    <li>Localize a opção <strong>"Pop-ups e redirecionamentos"</strong></li>
+                    <li>Selecione <strong>"Permitir"</strong></li>
+                    <li>Recarregue a página e tente novamente</li>
+                </ol>
+                <div class="tutorial-image-placeholder">
+                    <img src="../src/uploads/config/tutorial-chrome-popup.png" alt="Tutorial Chrome" style="max-width: 100%; border-radius: 8px; margin-top: 10px;" onerror="this.style.display='none'">
+                </div>
+            `;
+        } else if (userAgent.includes('firefox')) {
+            navegador = 'Firefox';
+            instrucoes = `
+                <ol>
+                    <li>Clique no ícone <strong>🛡️</strong> (escudo) na barra de endereço</li>
+                    <li>Clique em <strong>"Proteções aprimoradas desativadas"</strong></li>
+                    <li>Ou vá em: Menu (☰) → Configurações → Privacidade e Segurança</li>
+                    <li>Em "Permissões", clique em <strong>"Configurações"</strong> ao lado de "Bloquear janelas pop-up"</li>
+                    <li>Adicione este site às exceções</li>
+                </ol>
+            `;
+        } else if (userAgent.includes('edge')) {
+            navegador = 'Edge';
+            instrucoes = `
+                <ol>
+                    <li>Clique no ícone <strong>🔒</strong> (cadeado) na barra de endereço</li>
+                    <li>Localize <strong>"Pop-ups e redirecionamentos"</strong></li>
+                    <li>Selecione <strong>"Permitir"</strong></li>
+                    <li>Recarregue a página e tente novamente</li>
+                </ol>
+            `;
+        } else if (userAgent.includes('safari')) {
+            navegador = 'Safari';
+            instrucoes = `
+                <ol>
+                    <li>Vá em <strong>Safari</strong> → <strong>Preferências</strong></li>
+                    <li>Clique na aba <strong>"Sites"</strong></li>
+                    <li>Selecione <strong>"Janelas pop-up"</strong> no menu lateral</li>
+                    <li>Encontre este site e altere para <strong>"Permitir"</strong></li>
+                </ol>
+            `;
+        } else {
+            instrucoes = `
+                <ol>
+                    <li>Procure o ícone <strong>🔒</strong> ou <strong>⚙️</strong> na barra de endereço</li>
+                    <li>Busque por <strong>"Pop-ups"</strong> ou <strong>"Janelas pop-up"</strong></li>
+                    <li>Altere a configuração para <strong>"Permitir"</strong></li>
+                    <li>Recarregue a página</li>
+                </ol>
+            `;
+        }
+        
+        // Criar modal
+        const modal = document.createElement('div');
+        modal.id = 'popupBlockedModal';
+        modal.className = 'popup-blocked-modal-overlay';
+        modal.innerHTML = `
+            <div class="popup-blocked-modal-content">
+                <div class="popup-blocked-header">
+                    <span class="popup-blocked-icon">🚫</span>
+                    <h3>Pop-ups Bloqueados</h3>
+                    <button class="popup-blocked-close" onclick="fecharModalPopup()">&times;</button>
+                </div>
+                <div class="popup-blocked-body">
+                    <p class="popup-blocked-message">
+                        <strong>Os pop-ups estão bloqueados no seu navegador!</strong><br>
+                        Para visualizar os serviços, você precisa permitir pop-ups neste site.
+                    </p>
+                    <div class="popup-blocked-tutorial">
+                        <h4>📖 Como permitir pop-ups no ${navegador}:</h4>
+                        ${instrucoes}
+                    </div>
+                    <div class="popup-blocked-tip">
+                        <strong>💡 Dica:</strong> Após permitir os pop-ups, clique novamente no serviço desejado.
+                    </div>
+                </div>
+                <div class="popup-blocked-footer">
+                    <button class="btn-primary" onclick="fecharModalPopup()">Entendi</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Mostrar modal
+        setTimeout(() => {
+            modal.style.display = 'flex';
+        }, 10);
+    }
+
+    // Função para fechar modal
+    function fecharModalPopup() {
+        const modal = document.getElementById('popupBlockedModal');
+        if (modal) {
+            modal.style.display = 'none';
+            setTimeout(() => modal.remove(), 300);
+        }
+    }
+
+    // Fechar modal ao clicar fora
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('popupBlockedModal');
+        if (modal && e.target === modal) {
+            fecharModalPopup();
+        }
+    });

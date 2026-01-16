@@ -8,7 +8,30 @@ global $mysqli;
 
 header('Content-Type: application/json');
 
-
+// Buscar serviço específico por ID
+if (isset($_POST['service_id'])) {
+    $serviceId = intval($_POST['service_id']);
+    
+    $sql = "SELECT s.id, s.name, s.description, s.word_keys, s.blocos, d.src as dept_logo, d.name as dept_name
+            FROM services s
+            LEFT JOIN departaments d ON s.departamento = d.id
+            WHERE s.id = ? AND s.active = 1 AND s.accept = 1";
+    
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('i', $serviceId);
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $results = [];
+    
+    if ($row = $result->fetch_assoc()) {
+        $results[] = $row;
+    }
+    
+    $stmt->close();
+    echo json_encode($results);
+    exit;
+}
 
 if (!isset($_POST['query']) || empty(trim($_POST['query']))) {
     echo json_encode([]);

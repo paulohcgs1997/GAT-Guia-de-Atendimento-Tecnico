@@ -25,6 +25,13 @@ $services_query = "SELECT s.*, d.name as dept_name
                    WHERE s.active = 1 
                    ORDER BY s.last_modification DESC";
 $services = $mysqli->query($services_query);
+
+// Verificar se campo status existe, se não, usar fallback
+$status_field_exists = true;
+$test_query = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+if ($test_query->num_rows == 0) {
+    $status_field_exists = false;
+}
 ?>
 
 <!DOCTYPE html>
@@ -34,57 +41,6 @@ $services = $mysqli->query($services_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php include_once PROJECT_ROOT . '/src/includes/head_config.php'; ?>
     <link rel="stylesheet" href="../src/css/style.css">
-    <style>
-        /* Loading Overlay para quando vem com parâmetro ?edit */
-        .page-loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .page-loading-overlay.active {
-            display: flex;
-        }
-        
-        .page-loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #e5e7eb;
-            border-top-color: #2563eb;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        .page-loading-text {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-        }
-        
-        .page-loading-subtext {
-            font-size: 14px;
-            color: #6b7280;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Ocultar conteúdo principal durante loading */
-        body.loading-service .gestao-container {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-    </style>
 </head>
 <body>
     <?php include_once PROJECT_ROOT . '/src/includes/header.php'; ?>
@@ -122,6 +78,17 @@ $services = $mysqli->query($services_query);
                     <tbody id="servicesTableBody">
                         <?php while($service = $services->fetch_assoc()): 
                             $hasRejection = !empty($service['rejection_reason']);
+                            
+                            // Determinar status
+                            $status = 'draft';
+                            if ($status_field_exists && isset($service['status'])) {
+                                $status = $service['status'];
+                            } else {
+                                // Fallback para sistemas sem campo status
+                                if ($hasRejection) $status = 'rejected';
+                                elseif ($service['accept']) $status = 'approved';
+                                else $status = 'pending';
+                            }
                         ?>
                         <tr>
                             <td><?= $service['id'] ?></td>
@@ -142,22 +109,30 @@ $services = $mysqli->query($services_query);
                             <td><?= htmlspecialchars($service['dept_name']) ?></td>
                             <td><?= htmlspecialchars($service['blocos'] ?? '-') ?></td>
                             <td>
-                                <?php if ($hasRejection): ?>
-                                    <span class="status-badge" style="background: #fee2e2; color: #dc2626; border: 2px solid #dc2626;">
-                                        ❌ Não Aprovado
-                                    </span>
-                                <?php else: ?>
-                                    <span class="status-badge <?= $service['accept'] ? 'approved' : 'pending' ?>">
-                                        <?= $service['accept'] ? '✓ Aprovado' : '⏳ Pendente' ?>
-                                    </span>
-                                <?php endif; ?>
-                                <?php if (!$service['accept'] && $_SESSION['perfil'] == '1'): ?>
-                                    <button class="btn-icon btn-approve" onclick="approveService(<?= $service['id'] ?>, event)" title="Aprovar" style="background: #10b981; color: white; margin-left: 5px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">✓ Aprovar</button>
+                                <?php 
+                                // Badges de status
+                                $status_badges = [
+                                    'draft' => ['icon' => '📝', 'text' => 'Rascunho', 'bg' => '#f3f4f6', 'color' => '#6b7280', 'border' => '#9ca3af'],
+                                    'pending' => ['icon' => '⏳', 'text' => 'Em Análise', 'bg' => '#fef3c7', 'color' => '#d97706', 'border' => '#f59e0b'],
+                                    'approved' => ['icon' => '✓', 'text' => 'Aprovado', 'bg' => '#d1fae5', 'color' => '#059669', 'border' => '#10b981'],
+                                    'rejected' => ['icon' => '❌', 'text' => 'Rejeitado', 'bg' => '#fee2e2', 'color' => '#dc2626', 'border' => '#dc2626']
+                                ];
+                                $badge = $status_badges[$status];
+                                ?>
+                                <span class="status-badge" style="background: <?= $badge['bg'] ?>; color: <?= $badge['color'] ?>; border: 2px solid <?= $badge['border'] ?>; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block;">
+                                    <?= $badge['icon'] ?> <?= $badge['text'] ?>
+                                </span>
+                                <br>
+                                <?php if ($status === 'pending' && $_SESSION['perfil'] == '1'): ?>
+                                    <button class="btn-icon btn-approve" onclick="approveService(<?= $service['id'] ?>, event)" title="Aprovar" style="background: #10b981; color: white; margin-top: 5px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">✓ Aprovar</button>
                                 <?php endif; ?>
                             </td>
                             <td><?= date('d/m/Y H:i', strtotime($service['last_modification'])) ?></td>
                             <td class="actions-cell">
                                 <button class="btn-icon btn-edit" onclick='editService(<?= json_encode($service) ?>)' title="Editar">✏️</button>
+                                <?php if (in_array($status, ['draft', 'rejected'])): ?>
+                                    <button class="btn-icon btn-send" onclick="sendToReview('service', <?= $service['id'] ?>, event)" title="Enviar para Análise" style="background: #3b82f6; color: white; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; margin-left: 3px;">📤 Enviar</button>
+                                <?php endif; ?>
                                 <button class="btn-icon btn-delete" onclick="deleteService(<?= $service['id'] ?>)" title="Excluir">🗑️</button>
                             </td>
                         </tr>
@@ -768,6 +743,47 @@ $services = $mysqli->query($services_query);
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Salvar';
                 showModalNotification('⚠ Erro ao salvar serviço. Tente novamente.', 'error');
+            }
+        }
+
+        // ========== ENVIAR PARA ANÁLISE ==========
+        async function sendToReview(type, id, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const itemName = type === 'tutorial' ? 'tutorial' : 'serviço';
+            const confirmed = await showConfirm(`Deseja enviar este ${itemName} para análise? Os administradores serão notificados.`);
+            if (!confirmed) return;
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Enviando...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('type', type);
+                formData.append('id', id);
+                
+                const response = await fetch('../src/php/send_to_review.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.message || 'Erro ao enviar para análise', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '📤 Enviar';
+                }
+            } catch (error) {
+                console.error('Erro ao enviar para análise:', error);
+                showAlert('Erro ao enviar para análise', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '📤 Enviar';
             }
         }
 

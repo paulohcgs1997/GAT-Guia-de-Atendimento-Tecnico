@@ -34,16 +34,39 @@ function getConfig($mysqli, $key, $default = '') {
 $systemName = getConfig($mysqli ?? null, 'system_name', 'SISTEMA');
 $systemLogo = getConfig($mysqli ?? null, 'system_logo', '');
 $systemFavicon = getConfig($mysqli ?? null, 'system_favicon', '');
+
+// Buscar dados do usuário logado
+$userName = $_SESSION['nome'] ?? 'Usuário';
+$userLogin = $_SESSION['user'] ?? '';
+$userPhoto = null;
+$userEmail = $_SESSION['user_email'] ?? '';
+
+if (isset($_SESSION['user_id']) && $mysqli) {
+    $stmt = $mysqli->prepare("SELECT nome_completo, foto, email FROM usuarios WHERE id = ?");
+    $stmt->bind_param('i', $_SESSION['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $userName = $row['nome_completo'] ?: $userName;
+        $userPhoto = $row['foto'];
+        $userEmail = $row['email'] ?: $userEmail;
+        $_SESSION['user_foto'] = $userPhoto;
+        $_SESSION['user_email'] = $userEmail;
+    }
+}
 ?>
 
 <header>
+    <a href="dashboard.php">
     <div class="logo">
+        
         <?php if (!empty($systemLogo)): ?>
             <img src="<?php echo htmlspecialchars($systemLogo); ?>" alt="<?php echo htmlspecialchars($systemName); ?>" style="max-height: 50px;">
         <?php else: ?>
             <?php echo htmlspecialchars($systemName); ?>
         <?php endif; ?>
     </div>
+    </a>
     <div class="search-container">
         <input type="text" id="searchInput" placeholder="Buscar serviços..." autocomplete="off">
         <div class="search-loading">
@@ -66,19 +89,36 @@ $systemFavicon = getConfig($mysqli ?? null, 'system_favicon', '');
             <?php endif; ?>
             <li class="user-menu-container">
                 <button class="user-menu-btn" onclick="toggleUserMenu(event)">
-                    <span class="user-icon">👤</span>
-                    <span class="user-name"><?php echo htmlspecialchars($_SESSION['nome'] ?? 'Usuário'); ?></span>
+                    <?php if ($userPhoto): ?>
+                        <img src="../<?php echo htmlspecialchars($userPhoto); ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar">
+                    <?php else: ?>
+                        <span class="user-icon-circle">👤</span>
+                    <?php endif; ?>
+                    <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
                     <span class="dropdown-arrow">▼</span>
                 </button>
                 <div class="user-dropdown" id="userDropdown">
                     <div class="user-dropdown-header">
-                        <strong><?php echo htmlspecialchars($_SESSION['nome'] ?? 'Usuário'); ?></strong>
-                        <small><?php echo htmlspecialchars($_SESSION['user'] ?? ''); ?></small>
+                        <div class="user-dropdown-avatar">
+                            <?php if ($userPhoto): ?>
+                                <img src="../<?php echo htmlspecialchars($userPhoto); ?>" alt="<?php echo htmlspecialchars($userName); ?>">
+                            <?php else: ?>
+                                <span class="user-avatar-large">👤</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="user-dropdown-info">
+                            <strong><?php echo htmlspecialchars($userName); ?></strong>
+                            <small><?php echo htmlspecialchars($userEmail ?: $userLogin); ?></small>
+                        </div>
                     </div>
                     <div class="user-dropdown-divider"></div>
+                    <a href="perfil.php" class="user-dropdown-item">
+                        <span>👤</span> Meu Perfil
+                    </a>
                     <a href="#" class="user-dropdown-item" onclick="openChangePasswordModal(); return false;">
                         <span>🔑</span> Alterar Senha
                     </a>
+                    <div class="user-dropdown-divider"></div>
                     <a href="logout.php" class="user-dropdown-item logout">
                         <span>🚪</span> Sair
                     </a>

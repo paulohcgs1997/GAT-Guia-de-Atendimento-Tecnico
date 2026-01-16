@@ -26,21 +26,41 @@ if ($user_perfil == '3' && $user_departamento) {
     $dept_filter = " AND b.departamento = $user_departamento";
 }
 
-// Buscar tutoriais pendentes (apenas accept = 0 e sem motivo de rejeição)
-$tutoriais_query = "SELECT b.*, 
-                    CASE 
-                        WHEN b.is_clone = 1 THEN CONCAT('📝 Atualização de: ', bo.name)
-                        ELSE b.name
-                    END as display_name,
-                    b.is_clone,
-                    bo.name as original_name,
-                    d.name as dept_name
-                    FROM blocos b
-                    LEFT JOIN blocos bo ON b.original_id = bo.id
-                    LEFT JOIN departaments d ON b.departamento = d.id
-                    WHERE b.accept = 0 AND b.active = 1 AND (b.rejection_reason IS NULL OR b.rejection_reason = '')
-                    $dept_filter
-                    ORDER BY b.is_clone DESC, b.last_modification DESC";
+// Buscar tutoriais pendentes (APENAS CLONES - editados de tutoriais já aprovados)
+// Tutoriais novos não precisam aprovação aqui, serão aprovados junto com o serviço
+$check_col = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+if ($check_col->num_rows > 0) {
+    // Sistema atualizado - filtrar por status e apenas clones
+    $tutoriais_query = "SELECT b.*, 
+                        CONCAT('📝 Atualização de: ', bo.name) as display_name,
+                        b.is_clone,
+                        bo.name as original_name,
+                        d.name as dept_name
+                        FROM blocos b
+                        INNER JOIN blocos bo ON b.original_id = bo.id
+                        LEFT JOIN departaments d ON b.departamento = d.id
+                        WHERE b.active = 1 
+                        AND b.status = 'pending'
+                        AND b.is_clone = 1
+                        $dept_filter
+                        ORDER BY b.last_modification DESC";
+} else {
+    // Sistema sem atualização - usar lógica antiga, apenas clones
+    $tutoriais_query = "SELECT b.*, 
+                        CONCAT('📝 Atualização de: ', bo.name) as display_name,
+                        b.is_clone,
+                        bo.name as original_name,
+                        d.name as dept_name
+                        FROM blocos b
+                        INNER JOIN blocos bo ON b.original_id = bo.id
+                        LEFT JOIN departaments d ON b.departamento = d.id
+                        WHERE b.accept = 0 
+                        AND b.active = 1 
+                        AND (b.rejection_reason IS NULL OR b.rejection_reason = '')
+                        AND b.is_clone = 1
+                        $dept_filter
+                        ORDER BY b.last_modification DESC";
+}
 $tutoriais = $mysqli->query($tutoriais_query);
 
 // Filtro de departamento para serviços
@@ -49,20 +69,39 @@ if ($user_perfil == '3' && $user_departamento) {
     $dept_filter_services = " AND s.departamento = $user_departamento";
 }
 
-// Buscar serviços pendentes com tutoriais vinculados (apenas accept = 0 e sem motivo de rejeição)
-$servicos_query = "SELECT s.*, d.name as dept_name,
-                   CASE 
-                       WHEN s.is_clone = 1 THEN CONCAT('📝 Atualização de: ', so.name)
-                       ELSE s.name
-                   END as display_name,
-                   s.is_clone,
-                   so.name as original_name
-                   FROM services s
-                   LEFT JOIN departaments d ON s.departamento = d.id
-                   LEFT JOIN services so ON s.original_id = so.id
-                   WHERE s.accept = 0 AND s.active = 1 AND (s.rejection_reason IS NULL OR s.rejection_reason = '')
-                   $dept_filter_services
-                   ORDER BY s.is_clone DESC, s.last_modification DESC";
+// Buscar serviços pendentes (apenas status 'pending' - em análise)
+$check_col_services = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+if ($check_col_services->num_rows > 0) {
+    // Sistema atualizado - filtrar por status
+    $servicos_query = "SELECT s.*, d.name as dept_name,
+                       CASE 
+                           WHEN s.is_clone = 1 THEN CONCAT('📝 Atualização de: ', so.name)
+                           ELSE s.name
+                       END as display_name,
+                       s.is_clone,
+                       so.name as original_name
+                       FROM services s
+                       LEFT JOIN departaments d ON s.departamento = d.id
+                       LEFT JOIN services so ON s.original_id = so.id
+                       WHERE s.active = 1 AND s.status = 'pending'
+                       $dept_filter_services
+                       ORDER BY s.is_clone DESC, s.last_modification DESC";
+} else {
+    // Sistema sem atualização - usar lógica antiga
+    $servicos_query = "SELECT s.*, d.name as dept_name,
+                       CASE 
+                           WHEN s.is_clone = 1 THEN CONCAT('📝 Atualização de: ', so.name)
+                           ELSE s.name
+                       END as display_name,
+                       s.is_clone,
+                       so.name as original_name
+                       FROM services s
+                       LEFT JOIN departaments d ON s.departamento = d.id
+                       LEFT JOIN services so ON s.original_id = so.id
+                       WHERE s.accept = 0 AND s.active = 1 AND (s.rejection_reason IS NULL OR s.rejection_reason = '')
+                       $dept_filter_services
+                       ORDER BY s.is_clone DESC, s.last_modification DESC";
+}
 $servicos = $mysqli->query($servicos_query);
 
 // Função para buscar nomes dos tutoriais
@@ -90,363 +129,7 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php include_once PROJECT_ROOT . '/src/includes/head_config.php'; ?>
     <link rel="stylesheet" href="../src/css/style.css">
-    <style>
-        .approval-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .approval-section {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .approval-section h2 {
-            margin: 0 0 20px 0;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .approval-item {
-            background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
-            transition: all 0.3s;
-        }
-        
-        .approval-item:hover {
-            border-color: #2563eb;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-        }
-        
-        .approval-item.is-update {
-            background: #fef3c7;
-            border-color: #f59e0b;
-        }
-        
-        .approval-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-        }
-        
-        .approval-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 5px;
-        }
-        
-        .approval-meta {
-            font-size: 13px;
-            color: #6b7280;
-        }
-        
-        .approval-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .badge-new {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .badge-update {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .approval-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .btn-approve {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-approve:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        
-        .btn-reject {
-            background: #ef4444;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-preview {
-            background: #6b7280;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
-        }
-        
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-        
-        .update-warning {
-            background: #fffbeb;
-            border-left: 4px solid #f59e0b;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #92400e;
-        }
-        
-        /* Estilos para preview de tutoriais */
-        .service-approval {
-            border: 3px solid #3b82f6;
-        }
-        
-        .tutorials-container {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .tutorials-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        
-        .tutorials-header h4 {
-            margin: 0;
-            color: #1e293b;
-            font-size: 16px;
-        }
-        
-        .info-badge {
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .tutorial-preview-card {
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-        
-        .tutorial-preview-card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-        }
-        
-        .tutorial-preview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: #f1f5f9;
-        }
-        
-        .tutorial-preview-header h5 {
-            margin: 0 0 4px 0;
-            color: #1e293b;
-            font-size: 15px;
-        }
-        
-        .tutorial-steps-count {
-            font-size: 12px;
-            color: #64748b;
-            background: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            display: inline-block;
-        }
-        
-        .tutorial-actions-mini {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .btn-preview-mini {
-            background: #3b82f6;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        
-        .btn-preview-mini:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-        
-        .tutorial-preview-content {
-            padding: 20px;
-            background: white;
-            border-top: 1px solid #e2e8f0;
-            animation: slideDown 0.3s;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                max-height: 0;
-            }
-            to {
-                opacity: 1;
-                max-height: 1000px;
-            }
-        }
-        
-        .steps-flow {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .step-preview-item {
-            display: flex;
-            gap: 16px;
-            padding: 16px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-        
-        .step-preview-item:hover {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
-        
-        .step-number {
-            flex-shrink: 0;
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-        }
-        
-        .step-details {
-            flex: 1;
-        }
-        
-        .step-name {
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-        .step-html {
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-bottom: 8px;
-        }
-        
-        .step-media-indicator,
-        .step-questions-indicator {
-            display: inline-block;
-            padding: 4px 10px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 11px;
-            color: #64748b;
-            margin-right: 8px;
-        }
-        
-        .no-tutorials-warning {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-            color: #92400e;
-            font-size: 14px;
-        }
-        
-        .btn-approve-all {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 15px;
-            transition: all 0.3s;
-            flex: 1;
-        }
-        
-        .btn-approve-all:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-        }
-        
-        .btn-approve-all:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-        }
-    </style>
+    <title>Aprovações Pendentes - GAT</title>
 </head>
 <body>
     
@@ -455,14 +138,45 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
     <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
 
     <main>
-        <div class="approval-container">
-            <div class="page-header">
-                <h1>✅ Aprovações Pendentes</h1>
+        <div class="approval-container container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-3">✅ Aprovações Pendentes</h1>
+                    <p class="text-muted mb-4">Gerencie os itens que aguardam aprovação</p>
+                </div>
             </div>
 
-            <!-- Tutoriais Pendentes -->
-            <div class="approval-section">
-                <h2>📚 Tutoriais Pendentes</h2>
+            <!-- Sistema de Guias/Tabs -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-4" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tutoriais-tab" data-bs-toggle="tab" data-bs-target="#tab-tutoriais" type="button" role="tab">
+                                <i class="bi bi-book"></i> Tutoriais 
+                                <?php if ($tutoriais->num_rows > 0): ?>
+                                    <span class="badge bg-warning text-dark"><?= $tutoriais->num_rows ?></span>
+                                <?php endif; ?>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="servicos-tab" data-bs-toggle="tab" data-bs-target="#tab-servicos" type="button" role="tab">
+                                <i class="bi bi-tools"></i> Serviços 
+                                <?php if ($servicos->num_rows > 0): ?>
+                                    <span class="badge bg-warning text-dark"><?= $servicos->num_rows ?></span>
+                                <?php endif; ?>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Conteúdo das Guias -->
+            <div class="tab-content">
+
+            <!-- Guia: Tutoriais Pendentes -->
+            <div class="tab-pane fade show active" id="tab-tutoriais" role="tabpanel">
+                <div class="approval-section">
+                    <h2>📚 Tutoriais Pendentes</h2>
                 <?php if ($tutoriais->num_rows > 0): ?>
                     <?php while($tutorial = $tutoriais->fetch_assoc()): ?>
                         <div class="approval-item <?= $tutorial['is_clone'] ? 'is-update' : '' ?>">
@@ -507,11 +221,13 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
                         <div style="font-size: 14px;">Todos os tutoriais foram aprovados</div>
                     </div>
                 <?php endif; ?>
+                </div>
             </div>
 
-            <!-- Serviços Pendentes -->
-            <div class="approval-section">
-                <h2>🛠️ Serviços Pendentes (com Tutoriais Vinculados)</h2>
+            <!-- Guia: Serviços Pendentes -->
+            <div class="tab-pane fade" id="tab-servicos" role="tabpanel">
+                <div class="approval-section">
+                    <h2>🛠️ Serviços Pendentes</h2>
                 <?php if ($servicos->num_rows > 0): ?>
                     <?php while($servico = $servicos->fetch_assoc()): 
                         $tutoriaisVinculados = getTutoriaisNomes($mysqli, $servico['blocos']);
@@ -645,7 +361,10 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
                         <div style="font-size: 14px;">Todos os serviços foram aprovados</div>
                     </div>
                 <?php endif; ?>
+                </div>
             </div>
+
+            </div><!-- Fecha tab-content -->
         </div>
     </main>
 
@@ -671,151 +390,6 @@ function getTutoriaisNomes($mysqli, $blocoIds) {
             </div>
         </div>
     </div>
-
-    <style>
-        .reject-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            animation: fadeIn 0.2s;
-        }
-        
-        .reject-modal-content {
-            background: white;
-            border-radius: 12px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s;
-        }
-        
-        .reject-modal-header {
-            padding: 20px 24px;
-            border-bottom: 2px solid #fee2e2;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .reject-modal-header h3 {
-            margin: 0;
-            color: #dc2626;
-        }
-        
-        .close-reject-modal {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #9ca3af;
-            line-height: 1;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        
-        .close-reject-modal:hover {
-            background: #f3f4f6;
-            color: #4b5563;
-        }
-        
-        .reject-modal-body {
-            padding: 24px;
-        }
-        
-        .reject-modal-body p {
-            margin: 0 0 16px 0;
-            color: #4b5563;
-            font-size: 14px;
-        }
-        
-        #rejectReason {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            resize: vertical;
-            transition: border-color 0.2s;
-        }
-        
-        #rejectReason:focus {
-            outline: none;
-            border-color: #ef4444;
-        }
-        
-        .reject-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-        
-        .btn-reject-confirm {
-            flex: 1;
-            background: #ef4444;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .btn-reject-confirm:hover {
-            background: #dc2626;
-            transform: translateY(-1px);
-        }
-        
-        .btn-reject-cancel {
-            flex: 1;
-            background: #f3f4f6;
-            color: #4b5563;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .btn-reject-cancel:hover {
-            background: #e5e7eb;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
 
     <script>
         async function aprovarItem(tipo, id, isClone) {

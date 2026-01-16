@@ -116,6 +116,7 @@ CREATE TABLE `blocos` (
   `id_step` varchar(255) DEFAULT NULL,
   `last_modification` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `accept` tinyint(1) DEFAULT 0,
+  `status` ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft',
   `last_accept` datetime DEFAULT NULL,
   `active` tinyint(1) DEFAULT 1,
   `original_id` int(11) DEFAULT NULL,
@@ -127,8 +128,9 @@ CREATE TABLE `blocos` (
   `departamento` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_name` (`name`),
-  KEY `idx_active` (`active`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `idx_active` (`active`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tutoriais do sistema';
 
 -- --------------------------------------------------------
 -- Estrutura para tabela `services`
@@ -143,6 +145,7 @@ CREATE TABLE `services` (
   `word_keys` text DEFAULT NULL,
   `last_modification` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `accept` tinyint(1) DEFAULT 0,
+  `status` ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft',
   `last_accept` datetime DEFAULT NULL,
   `active` tinyint(1) DEFAULT 1,
   `original_id` int(11) DEFAULT NULL,
@@ -154,9 +157,10 @@ CREATE TABLE `services` (
   PRIMARY KEY (`id`),
   KEY `idx_name` (`name`),
   KEY `idx_active` (`active`),
+  KEY `idx_status` (`status`),
   KEY `idx_departamento` (`departamento`),
   CONSTRAINT `services_ibfk_1` FOREIGN KEY (`departamento`) REFERENCES `departaments` (`id`) ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Serviços disponíveis no sistema';
 
 -- --------------------------------------------------------
 -- Estrutura para tabela `links`

@@ -39,11 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
     $steps = [];
     
     foreach ($stepIds as $stepId) {
-        $sqlStep = "SELECT s.*, GROUP_CONCAT(q.id) as question_ids 
-                    FROM steps s 
-                    LEFT JOIN questions q ON FIND_IN_SET(q.id, s.questions)
-                    WHERE s.id = ? AND s.active = 1
-                    GROUP BY s.id";
+        $sqlStep = "SELECT * FROM steps WHERE id = ? AND active = 1";
         $stmtStep = $mysqli->prepare($sqlStep);
         $stmtStep->bind_param('i', $stepId);
         $stmtStep->execute();
@@ -51,11 +47,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
         $step = $resultStep->fetch_assoc();
         
         if ($step) {
-            // Buscar perguntas
+            // Salvar os IDs das perguntas antes de sobrescrever
+            $questionsIdsStr = $step['questions'];
+            
+            // Buscar perguntas NA ORDEM definida na coluna questions
             $step['questions'] = [];
-            if (!empty($step['question_ids'])) {
-                $questionIds = explode(',', $step['question_ids']);
+            if (!empty($questionsIdsStr)) {
+                $questionIds = explode(',', $questionsIdsStr);
+                
+                // Iterar na ordem definida
                 foreach ($questionIds as $qId) {
+                    $qId = intval(trim($qId));
+                    if ($qId <= 0) continue;
+                    
                     $sqlQ = "SELECT id, name, text, proximo FROM questions WHERE id = ?";
                     $stmtQ = $mysqli->prepare($sqlQ);
                     $stmtQ->bind_param('i', $qId);
@@ -147,7 +151,16 @@ try {
         
         $tutorialId = intval($data['tutorial_id']);
         
-        $sql = "UPDATE blocos SET accept = 1, last_modification = NOW() WHERE id = ? AND active = 1";
+        // Atualizar accept e status se o campo existir
+        $sql = "UPDATE blocos SET accept = 1, last_modification = NOW()";
+        
+        // Verificar se campo status existe
+        $check_status = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+        if ($check_status->num_rows > 0) {
+            $sql .= ", status = 'approved'";
+        }
+        
+        $sql .= " WHERE id = ? AND active = 1";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('i', $tutorialId);
         $stmt->execute();
@@ -171,7 +184,16 @@ try {
         $name = $data['name'];
         $departamento = !empty($data['departamento']) ? intval($data['departamento']) : null;
         
-        $sql = "INSERT INTO blocos (name, id_step, accept, active, created_by, departamento) VALUES (?, '', 0, 1, ?, ?)";
+        // Verificar se campo status existe
+        $check_status = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+        $has_status = $check_status->num_rows > 0;
+        
+        if ($has_status) {
+            $sql = "INSERT INTO blocos (name, id_step, accept, active, created_by, departamento, status) VALUES (?, '', 0, 1, ?, ?, 'draft')";
+        } else {
+            $sql = "INSERT INTO blocos (name, id_step, accept, active, created_by, departamento) VALUES (?, '', 0, 1, ?, ?)";
+        }
+        
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('sii', $name, $_SESSION['user_id'], $departamento);
         $stmt->execute();
@@ -358,9 +380,11 @@ try {
     // ========== SALVAR PASSO ==========
     if ($action === 'save_step') {
         $tutorialId = intval($_POST['tutorial_id']);
-        $stepId = !empty($_POST['step_id']) ? intval($_POST['step_id']) : null;
+        $stepId = isset($_POST['step_id']) && $_POST['step_id'] !== '' ? intval($_POST['step_id']) : null;
         $name = $_POST['name'];
         $html = $_POST['html'];
+        
+        error_log("SAVE STEP - Tutorial ID: $tutorialId, Step ID: " . ($stepId ?? 'NULL (novo)') . ", Name: $name");
         
         // Upload de arquivo (se houver)
         $mediaSrc = '';
@@ -610,6 +634,82 @@ try {
         
         $mysqli->commit();
         echo json_encode(['success' => true, 'message' => 'Pergunta excluída com sucesso']);
+        exit;
+    }
+    
+    // ========== REORDENAR PERGUNTAS ==========
+    if ($action === 'reorder_questions') {
+        error_log("REORDER - Iniciando reordenação de perguntas");
+        
+        $stepId = intval($data['step_id']);
+        $questionIds = $data['question_ids'] ?? [];
+        
+        error_log("REORDER - Step ID: $stepId");
+        error_log("REORDER - Question IDs recebidos: " . json_encode($questionIds));
+        
+        if ($stepId <= 0) {
+            error_log("REORDER - ERRO: Step ID inválido");
+            throw new Exception('ID do passo inválido');
+        }
+        
+        if (empty($questionIds) || !is_array($questionIds)) {
+            error_log("REORDER - ERRO: IDs de perguntas vazios ou não é array");
+            throw new Exception('IDs de perguntas não fornecidos');
+        }
+        
+        // Validar que os IDs são numéricos
+        $questionIds = array_map('intval', $questionIds);
+        $questionIds = array_filter($questionIds, function($id) { return $id > 0; });
+        
+        if (empty($questionIds)) {
+            error_log("REORDER - ERRO: Nenhum ID válido após filtro");
+            throw new Exception('IDs de perguntas inválidos');
+        }
+        
+        error_log("REORDER - IDs válidos: " . implode(',', $questionIds));
+        
+        // Buscar o step atual
+        $sqlStep = "SELECT questions FROM steps WHERE id = ?";
+        $stmtStep = $mysqli->prepare($sqlStep);
+        $stmtStep->bind_param('i', $stepId);
+        $stmtStep->execute();
+        $resultStep = $stmtStep->get_result();
+        $step = $resultStep->fetch_assoc();
+        
+        if (!$step) {
+            error_log("REORDER - ERRO: Step não encontrado");
+            throw new Exception('Passo não encontrado');
+        }
+        
+        error_log("REORDER - Questions atuais no step: " . $step['questions']);
+        
+        // Verificar se todos os IDs pertencem a este step
+        $currentQuestions = !empty($step['questions']) ? explode(',', $step['questions']) : [];
+        $currentQuestions = array_map('intval', $currentQuestions);
+        
+        foreach ($questionIds as $qId) {
+            if (!in_array($qId, $currentQuestions)) {
+                error_log("REORDER - ERRO: Question ID $qId não pertence ao step");
+                throw new Exception('Pergunta ID ' . $qId . ' não pertence a este passo');
+            }
+        }
+        
+        // Atualizar a ordem das perguntas
+        $newQuestionsStr = implode(',', $questionIds);
+        error_log("REORDER - Nova ordem: $newQuestionsStr");
+        
+        $sqlUpdate = "UPDATE steps SET questions = ?, last_modification = NOW() WHERE id = ?";
+        $stmtUpdate = $mysqli->prepare($sqlUpdate);
+        $stmtUpdate->bind_param('si', $newQuestionsStr, $stepId);
+        
+        if (!$stmtUpdate->execute()) {
+            error_log("REORDER - ERRO no UPDATE: " . $stmtUpdate->error);
+            throw new Exception('Erro ao atualizar ordem das perguntas');
+        }
+        
+        error_log("REORDER - Sucesso!");
+        $mysqli->commit();
+        echo json_encode(['success' => true, 'message' => 'Ordem das perguntas atualizada']);
         exit;
     }
     

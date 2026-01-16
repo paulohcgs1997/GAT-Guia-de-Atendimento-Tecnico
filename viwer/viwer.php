@@ -23,9 +23,12 @@ check_permission_viewer();
         const canal = new BroadcastChannel('guia-acoes');
         const container = document.getElementById('container-viwer');
         let servicoAtual = null;
-        let todosSteps = []; // Armazenar todos os steps do serviço
+        let todosBlocos = []; // Armazenar todos os blocos do serviço
+        let blocoAtualIndex = 0; // Índice do bloco atual
+        let todosSteps = []; // Armazenar todos os steps do bloco atual
         let stepAtualIndex = 0; // Índice do step atual
         let navegacaoPorPerguntas = false; // Flag para indicar se está navegando por perguntas
+        let historicoNavegacao = []; // Histórico para permitir voltar
 
         // Verificar se foi passado service_id na URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -78,16 +81,15 @@ check_permission_viewer();
                     description: data.servico_description || ''
                 };
 
-                // Armazenar todos os steps do serviço
-                todosSteps = data.steps || [];
-                stepAtualIndex = 0;
-                navegacaoPorPerguntas = false; // Resetar flag
-
-                // Exibir primeiro step
-                if (todosSteps.length > 0) {
-                    exibirStepPorIndice(0);
+                // Armazenar todos os blocos do serviço
+                todosBlocos = data.blocos || [];
+                blocoAtualIndex = 0;
+                
+                // Se tem blocos, carregar o primeiro
+                if (todosBlocos.length > 0) {
+                    carregarBloco(0);
                 } else {
-                    container.innerHTML = '<div class="erro-mensagem">Nenhum passo encontrado para este serviço.</div>';
+                    container.innerHTML = '<div class="erro-mensagem">Nenhum bloco encontrado para este serviço.</div>';
                 }
             })
             .catch(error => {
@@ -115,16 +117,15 @@ check_permission_viewer();
                         return;
                     }
 
-                    // Armazenar todos os steps do serviço
-                    todosSteps = data.steps || [];
-                    stepAtualIndex = 0;
-                    navegacaoPorPerguntas = false; // Resetar flag
-
-                    // Exibir primeiro step
-                    if (todosSteps.length > 0) {
-                        exibirStepPorIndice(0);
+                    // Armazenar todos os blocos do serviço
+                    todosBlocos = data.blocos || [];
+                    blocoAtualIndex = 0;
+                    
+                    // Se tem blocos, carregar o primeiro
+                    if (todosBlocos.length > 0) {
+                        carregarBloco(0);
                     } else {
-                        container.innerHTML = '<div class="erro-mensagem">Nenhum passo encontrado para este serviço.</div>';
+                        container.innerHTML = '<div class="erro-mensagem">Nenhum bloco encontrado para este serviço.</div>';
                     }
                 })
                 .catch(error => {
@@ -132,8 +133,51 @@ check_permission_viewer();
                     container.innerHTML = '<div class="erro-mensagem">Erro ao carregar o guia de atendimento.</div>';
                 });
         }
+        
+        function carregarBloco(indice, limparHistorico = true) {
+            if (indice < 0 || indice >= todosBlocos.length) {
+                mostrarFinalTutorial();
+                return;
+            }
+            
+            blocoAtualIndex = indice;
+            const bloco = todosBlocos[indice];
+            
+            // Carregar steps deste bloco
+            todosSteps = bloco.steps || [];
+            stepAtualIndex = 0;
+            navegacaoPorPerguntas = false;
+            
+            // Limpar histórico ao mudar de bloco (exceto quando voltando)
+            if (limparHistorico) {
+                historicoNavegacao = [];
+            }
+            
+            // Exibir primeiro step do bloco
+            if (todosSteps.length > 0) {
+                exibirStepPorIndice(0, limparHistorico);
+            } else {
+                // Se não tem steps, avançar para próximo bloco
+                avancarParaProximoBloco();
+            }
+        }
+        
+        function avancarParaProximoBloco() {
+            const proximoBlocoIndex = blocoAtualIndex + 1;
+            
+            if (proximoBlocoIndex >= todosBlocos.length) {
+                // Não há mais blocos, finalizar serviço
+                mostrarFinalTutorial();
+            } else {
+                // Carregar próximo bloco
+                container.innerHTML = '<div class="loading">Carregando próximo tutorial...</div>';
+                setTimeout(() => {
+                    carregarBloco(proximoBlocoIndex);
+                }, 500);
+            }
+        }
 
-        function exibirStepPorIndice(indice) {
+        function exibirStepPorIndice(indice, adicionarAoHistorico = true) {
             if (indice < 0 || indice >= todosSteps.length) {
                 mostrarFinalTutorial();
                 return;
@@ -142,10 +186,24 @@ check_permission_viewer();
             stepAtualIndex = indice;
             navegacaoPorPerguntas = false; // Voltou para navegação sequencial
             const step = todosSteps[indice];
+            
+            // Adicionar ao histórico
+            if (adicionarAoHistorico) {
+                historicoNavegacao.push({
+                    tipo: 'sequencial',
+                    blocoIndex: blocoAtualIndex,
+                    stepIndex: indice,
+                    step: step
+                });
+            }
+            
             exibirStep(step, servicoAtual);
         }
 
         function exibirStep(step, servico) {
+            // Gerenciar botão de voltar como footer
+            const temHistorico = historicoNavegacao.length > 1;
+            
             let html = `
                 <div class="servico-info">
                     <h3>${servico.name}</h3>
@@ -209,8 +267,10 @@ check_permission_viewer();
                 `;
 
                 step.questions.forEach(question => {
+                    // Adicionar aspas se for string (next_block), manter número se for ID
+                    const proximoParam = isNaN(question.proximo) ? `'${question.proximo}'` : question.proximo;
                     html += `
-                        <button class="question-btn" onclick="proximoStep(${question.proximo})">
+                        <button class="question-btn" onclick="proximoStep(${proximoParam})">
                             ${question.text}
                         </button>
                     `;
@@ -241,6 +301,34 @@ check_permission_viewer();
             }
 
             container.innerHTML = html;
+            
+            // Adicionar ou remover classe has-footer
+            if (temHistorico) {
+                container.classList.add('has-footer');
+                
+                // Remover botão existente se houver
+                const botaoExistente = document.getElementById('btn-voltar-footer');
+                if (botaoExistente) {
+                    botaoExistente.remove();
+                }
+                
+                // Criar botão de voltar como footer
+                const botaoVoltar = document.createElement('button');
+                botaoVoltar.id = 'btn-voltar-footer';
+                botaoVoltar.className = 'btn-voltar-footer';
+                botaoVoltar.title = 'Voltar ao passo anterior';
+                botaoVoltar.innerHTML = '⬅️ Voltar ao passo anterior';
+                botaoVoltar.onclick = voltarStep;
+                document.body.appendChild(botaoVoltar);
+            } else {
+                container.classList.remove('has-footer');
+                
+                // Remover botão se não houver histórico
+                const botaoExistente = document.getElementById('btn-voltar-footer');
+                if (botaoExistente) {
+                    botaoExistente.remove();
+                }
+            }
         }
 
         function avancarParaProximoStep() {
@@ -256,11 +344,10 @@ check_permission_viewer();
         function proximoStep(stepId) {
             if (!servicoAtual) return;
 
-            // Verificar se deve avançar para o próximo bloco/tutorial
-            if (stepId === 'next_block' || stepId === 505 || stepId == '505') {
-                // "next_block" significa fim de um fluxo de perguntas, voltar para sequência linear
-                navegacaoPorPerguntas = false;
-                avancarParaProximoStep();
+            // Verificar se deve avançar para o próximo bloco (next_block significa fim do tutorial/bloco atual)
+            if (stepId === 'next_block') {
+                // Avançar para o próximo bloco
+                avancarParaProximoBloco();
                 return;
             }
 
@@ -274,6 +361,16 @@ check_permission_viewer();
                 // Se encontrou o step na lista, exibir por índice (mantém navegação por perguntas)
                 stepAtualIndex = indiceEncontrado;
                 const step = todosSteps[indiceEncontrado];
+                
+                // Adicionar ao histórico
+                historicoNavegacao.push({
+                    tipo: 'pergunta',
+                    blocoIndex: blocoAtualIndex,
+                    stepIndex: indiceEncontrado,
+                    stepId: stepId,
+                    step: step
+                });
+                
                 exibirStep(step, servicoAtual);
             } else {
                 // Se não encontrou, buscar no servidor (fluxo de perguntas para steps externos)
@@ -295,6 +392,14 @@ check_permission_viewer();
                             return;
                         }
 
+                        // Adicionar ao histórico
+                        historicoNavegacao.push({
+                            tipo: 'pergunta_externa',
+                            blocoIndex: blocoAtualIndex,
+                            stepId: stepId,
+                            step: data
+                        });
+
                         // Continua no modo de navegação por perguntas
                         exibirStep(data, servicoAtual);
                     })
@@ -305,6 +410,47 @@ check_permission_viewer();
                         avancarParaProximoStep();
                     });
             }
+        }
+
+        function voltarStep() {
+            if (historicoNavegacao.length <= 1) {
+                console.log('Não há histórico para voltar');
+                return;
+            }
+            
+            // Remover o passo atual do histórico
+            historicoNavegacao.pop();
+            
+            // Pegar o passo anterior
+            const stepAnterior = historicoNavegacao[historicoNavegacao.length - 1];
+            
+            if (!stepAnterior) {
+                console.log('Erro ao recuperar passo anterior');
+                return;
+            }
+            
+            // Verificar se mudou de bloco
+            if (stepAnterior.blocoIndex !== blocoAtualIndex) {
+                // Carregar o bloco anterior
+                blocoAtualIndex = stepAnterior.blocoIndex;
+                const bloco = todosBlocos[blocoAtualIndex];
+                todosSteps = bloco.steps || [];
+            }
+            
+            // Restaurar o estado
+            if (stepAnterior.tipo === 'sequencial') {
+                stepAtualIndex = stepAnterior.stepIndex;
+                navegacaoPorPerguntas = false;
+            } else {
+                // Navegação por perguntas
+                navegacaoPorPerguntas = true;
+                if (stepAnterior.stepIndex !== undefined) {
+                    stepAtualIndex = stepAnterior.stepIndex;
+                }
+            }
+            
+            // Exibir o step sem adicionar ao histórico
+            exibirStep(stepAnterior.step, servicoAtual);
         }
 
         function finalizarFluxoPerguntas() {
