@@ -190,8 +190,12 @@ if ($action === 'install') {
             
             // Buscar arquivos de atualização na pasta install
             $update_files = glob(__DIR__ . '/update_*.sql');
+            $add_files = glob(__DIR__ . '/add_*.sql');
             
-            foreach ($update_files as $update_file) {
+            // Mesclar os dois arrays
+            $all_update_files = array_merge($update_files, $add_files);
+            
+            foreach ($all_update_files as $update_file) {
                 $filename = basename($update_file);
                 
                 try {

@@ -221,10 +221,52 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                             </h3>
                             <p class="text-muted mb-0">Mantenha seu sistema atualizado com as últimas melhorias do GitHub</p>
                         </div>
-                        <div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="showGithubConfig()">
+                                <i class="bi bi-gear"></i> Configurar Repositório
+                            </button>
                             <button type="button" class="btn btn-success" onclick="checkSystemUpdates()" id="btnCheckUpdates">
                                 <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuração do Repositório GitHub -->
+                    <div id="githubConfigSection" style="display: none; margin-bottom: 20px;">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">⚙️ Configurar Repositório GitHub</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="githubConfigForm" onsubmit="saveGithubConfig(event)">
+                                    <div class="alert alert-info mb-3">
+                                        <strong>💡 Dica:</strong> Cole a URL do seu repositório GitHub e o sistema configurará automaticamente.
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="github_url" class="form-label">URL do Repositório GitHub *</label>
+                                        <input type="text" class="form-control form-control-lg" id="github_url" name="github_url" required
+                                               placeholder="https://github.com/usuario/repositorio">
+                                        <small class="text-muted">Cole a URL do GitHub (exemplo: https://github.com/paulohcgs1997/GAT-Guia-de-Atendimento-Tecnico)</small>
+                                    </div>
+                                    
+                                    <div id="urlDetectionResult" style="display: none; margin-bottom: 15px;">
+                                        <div class="alert alert-success">
+                                            <strong>✅ Repositório Detectado:</strong><br>
+                                            <span id="detectedInfo"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save"></i> Salvar e Testar Repositório
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="hideGithubConfig()">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     
@@ -281,6 +323,7 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <script src="../src/js/config-database.js"></script>
     <script src="../src/js/config-system.js"></script>
     <script src="../src/js/system-updater.js"></script>
+    <script src="../src/js/github-config.js"></script>
     <!-- Bootstrap cuida da navegação das tabs automaticamente -->
 </body>
 
