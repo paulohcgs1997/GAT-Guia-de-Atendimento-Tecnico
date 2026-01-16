@@ -1,39 +1,5 @@
 // github-config.js - Configuração do Repositório GitHub
 
-// Detectar informações da URL automaticamente
-document.addEventListener('DOMContentLoaded', function() {
-    const urlInput = document.getElementById('github_url');
-    const detectionResult = document.getElementById('urlDetectionResult');
-    const detectedInfo = document.getElementById('detectedInfo');
-    
-    if (urlInput) {
-        urlInput.addEventListener('input', function() {
-            const url = this.value.trim();
-            const parsed = parseGithubUrl(url);
-            
-            if (parsed) {
-                detectionResult.style.display = 'block';
-                detectedInfo.innerHTML = `
-                    <strong>Proprietário:</strong> ${parsed.owner}<br>
-                    <strong>Repositório:</strong> ${parsed.repo}<br>
-                    <strong>URL:</strong> <a href="https://github.com/${parsed.owner}/${parsed.repo}" target="_blank">
-                        https://github.com/${parsed.owner}/${parsed.repo}
-                    </a>
-                `;
-            } else if (url.length > 10) {
-                detectionResult.style.display = 'block';
-                detectedInfo.parentElement.className = 'alert alert-warning';
-                detectedInfo.innerHTML = '<strong>⚠️ URL inválida.</strong> Use o formato: https://github.com/usuario/repositorio';
-            } else {
-                detectionResult.style.display = 'none';
-            }
-        });
-        
-        // Carregar configuração atual
-        loadCurrentGithubConfig();
-    }
-});
-
 // Função para extrair owner/repo de qualquer formato de URL do GitHub
 function parseGithubUrl(url) {
     if (!url) return null;
@@ -67,13 +33,21 @@ function parseGithubUrl(url) {
 
 // Mostrar seção de configuração
 function showGithubConfig() {
-    document.getElementById('githubConfigSection').style.display = 'block';
-    loadCurrentGithubConfig();
+    const section = document.getElementById('githubConfigSection');
+    if (section) {
+        section.style.display = 'block';
+        loadCurrentGithubConfig();
+    } else {
+        console.error('Elemento githubConfigSection não encontrado');
+    }
 }
 
 // Ocultar seção de configuração
 function hideGithubConfig() {
-    document.getElementById('githubConfigSection').style.display = 'none';
+    const section = document.getElementById('githubConfigSection');
+    if (section) {
+        section.style.display = 'none';
+    }
 }
 
 // Carregar configuração atual do GitHub
@@ -105,6 +79,9 @@ async function loadCurrentGithubConfig() {
 async function saveGithubConfig(event) {
     event.preventDefault();
     
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
     const urlInput = document.getElementById('github_url');
     const url = urlInput.value.trim();
     
@@ -130,10 +107,7 @@ async function saveGithubConfig(event) {
         const result = await response.json();
         
         if (result.success) {
-            alert(`✅ Repositório configurado com sucesso!\n\n📦 ${result.repository}\n\nAgora você pode verificar atualizações.`
-        
-        if (result.success) {
-            alert('✅ Configuração do GitHub salva com sucesso!\n\nAgora você pode verificar atualizações.');
+            alert(`✅ Repositório configurado com sucesso!\n\n📦 ${result.repository}\n\nAgora você pode verificar atualizações.`);
             hideGithubConfig();
             
             // Verificar atualizações automaticamente
@@ -149,3 +123,35 @@ async function saveGithubConfig(event) {
         submitBtn.innerHTML = originalText;
     }
 }
+
+// Detectar informações da URL automaticamente
+document.addEventListener('DOMContentLoaded', function() {
+    const urlInput = document.getElementById('github_url');
+    const detectionResult = document.getElementById('urlDetectionResult');
+    const detectedInfo = document.getElementById('detectedInfo');
+    
+    if (urlInput && detectionResult && detectedInfo) {
+        urlInput.addEventListener('input', function() {
+            const url = this.value.trim();
+            const parsed = parseGithubUrl(url);
+            
+            if (parsed) {
+                detectionResult.style.display = 'block';
+                detectedInfo.parentElement.className = 'alert alert-success';
+                detectedInfo.innerHTML = `
+                    <strong>Proprietário:</strong> ${parsed.owner}<br>
+                    <strong>Repositório:</strong> ${parsed.repo}<br>
+                    <strong>URL:</strong> <a href="https://github.com/${parsed.owner}/${parsed.repo}" target="_blank">
+                        https://github.com/${parsed.owner}/${parsed.repo}
+                    </a>
+                `;
+            } else if (url.length > 10) {
+                detectionResult.style.display = 'block';
+                detectedInfo.parentElement.className = 'alert alert-warning';
+                detectedInfo.innerHTML = '<strong>⚠️ URL inválida.</strong> Use o formato: https://github.com/usuario/repositorio';
+            } else {
+                detectionResult.style.display = 'none';
+            }
+        });
+    }
+});
