@@ -57,7 +57,10 @@ if ($action === 'approve_service_complete') {
             if ($has_status) {
                 $update_stmt = $mysqli->prepare("UPDATE services SET 
                     name = ?,
-                    keywords = ?,
+                    description = ?,
+                    departamento = ?,
+                    blocos = ?,
+                    word_keys = ?,
                     status = 'approved',
                     accept = 1,
                     rejection_reason = NULL,
@@ -68,7 +71,10 @@ if ($action === 'approve_service_complete') {
             } else {
                 $update_stmt = $mysqli->prepare("UPDATE services SET 
                     name = ?,
-                    keywords = ?,
+                    description = ?,
+                    departamento = ?,
+                    blocos = ?,
+                    word_keys = ?,
                     accept = 1,
                     rejection_reason = NULL,
                     rejected_by = NULL,
@@ -77,9 +83,12 @@ if ($action === 'approve_service_complete') {
                     WHERE id = ?");
             }
             
-            $update_stmt->bind_param("ssi", 
+            $update_stmt->bind_param("ssissi", 
                 $servico['name'],
-                $servico['keywords'],
+                $servico['description'],
+                $servico['departamento'],
+                $servico['blocos'],
+                $servico['word_keys'],
                 $servico['original_id']
             );
             $update_stmt->execute();

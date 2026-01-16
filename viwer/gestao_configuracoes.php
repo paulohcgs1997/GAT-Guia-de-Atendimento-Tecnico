@@ -42,10 +42,10 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 </div>
                 
                 <div style="display: flex; gap: 10px;">
-                    <button type="button" class="btn-primary" onclick="checkDatabase()" id="btnCheckDb">
+                    <button type="button" class="btn btn-primary" onclick="checkDatabase()" id="btnCheckDb">
                         🔍 Verificar Agora
                     </button>
-                    <button type="button" class="btn-success" onclick="applyUpdates()" id="btnApplyUpdates" style="display: none; background: #10b981;">
+                    <button type="button" class="btn btn-success" onclick="applyUpdates()" id="btnApplyUpdates" style="display: none;">
                         ⚡ Aplicar Atualizações
                     </button>
                 </div>
@@ -115,10 +115,10 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="window.location.href='gestao.php'">
-                        Cancelar
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
+                        ↩️ Cancelar
                     </button>
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" class="btn btn-primary">
                         💾 Salvar Configurações
                     </button>
                 </div>

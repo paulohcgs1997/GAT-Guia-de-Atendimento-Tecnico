@@ -29,7 +29,7 @@ try {
     $table = $type === 'tutorial' ? 'blocos' : 'services';
     
     // Verificar se o item existe e pertence ao usuário (ou se é admin)
-    $check_stmt = $conexao->prepare("
+    $check_stmt = $mysqli->prepare("
         SELECT id, status, created_by 
         FROM $table 
         WHERE id = ? AND active = 1
@@ -57,7 +57,7 @@ try {
     // Validações específicas
     if ($type === 'tutorial') {
         // Verificar se o tutorial tem pelo menos 1 passo
-        $steps_check = $conexao->prepare("SELECT id_step FROM blocos WHERE id = ?");
+        $steps_check = $mysqli->prepare("SELECT id_step FROM blocos WHERE id = ?");
         $steps_check->bind_param("i", $id);
         $steps_check->execute();
         $steps_result = $steps_check->get_result();
@@ -68,7 +68,7 @@ try {
         }
     } else {
         // Verificar se o serviço tem pelo menos 1 tutorial vinculado
-        $blocos_check = $conexao->prepare("SELECT blocos FROM services WHERE id = ?");
+        $blocos_check = $mysqli->prepare("SELECT blocos FROM services WHERE id = ?");
         $blocos_check->bind_param("i", $id);
         $blocos_check->execute();
         $blocos_result = $blocos_check->get_result();
@@ -80,7 +80,7 @@ try {
     }
     
     // Atualizar status para 'pending' e limpar rejection_reason se houver
-    $update_stmt = $conexao->prepare("
+    $update_stmt = $mysqli->prepare("
         UPDATE $table 
         SET status = 'pending', 
             rejection_reason = NULL, 
@@ -99,7 +99,7 @@ try {
         // Log da ação
         error_log("[$item_name #$id] Enviado para análise por usuário #$user_id");
     } else {
-        throw new Exception('Erro ao atualizar status: ' . $conexao->error);
+        throw new Exception('Erro ao atualizar status: ' . $mysqli->error);
     }
     
 } catch (Exception $e) {
