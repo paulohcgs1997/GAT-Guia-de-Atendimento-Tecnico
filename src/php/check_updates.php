@@ -58,6 +58,9 @@ $github_owner = $repo_info['owner'];
 $github_repo = $repo_info['repo'];
 $github_api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}";
 
+// IMPORTANTE: Sempre usar o branch 'main' para atualizações
+$github_branch = 'main';
+
 // Ler versão atual do sistema
 $version_file = __DIR__ . '/../../version.json';
 $current_version = ['version' => '1.0.0', 'build' => 'desconhecido'];
@@ -84,8 +87,8 @@ try {
     $release_data = @file_get_contents($releases_url, false, $context);
     
     if ($release_data === false) {
-        // Se não há releases, tentar obter info do último commit
-        $commits_url = "{$github_api_url}/commits/main";
+        // Se não há releases, tentar obter info do último commit do branch main
+        $commits_url = "{$github_api_url}/commits/{$github_branch}";
         $commit_data = @file_get_contents($commits_url, false, $context);
         
         if ($commit_data === false) {
@@ -93,6 +96,9 @@ try {
         }
         
         $commit = json_decode($commit_data, true);
+        
+        // URL de download direto do branch main
+        $main_branch_download = "https://github.com/{$github_owner}/{$github_repo}/archive/refs/heads/main.zip";
         
         echo json_encode([
             'success' => true,
@@ -102,6 +108,8 @@ try {
             'current_build' => $current_version['build'],
             'message' => 'Sistema está em versão de desenvolvimento',
             'repository' => "{$github_owner}/{$github_repo}",
+            'branch' => 'main',
+            'download_url' => $main_branch_download,  // Sempre do branch main
             'last_commit' => [
                 'sha' => substr($commit['sha'], 0, 7),
                 'message' => $commit['commit']['message'],
@@ -118,6 +126,9 @@ try {
     $latest_version = ltrim($release['tag_name'], 'v');
     $has_update = version_compare($latest_version, $current_version['version'], '>');
     
+    // SEMPRE usar o branch main para download, não a release específica
+    $main_branch_download = "https://github.com/{$github_owner}/{$github_repo}/archive/refs/heads/main.zip";
+    
     echo json_encode([
         'success' => true,
         'has_update' => $has_update,
@@ -125,12 +136,14 @@ try {
         'latest_version' => $latest_version,
         'current_build' => $current_version['build'],
         'repository' => "{$github_owner}/{$github_repo}",
+        'branch' => 'main',
         'release_info' => [
             'name' => $release['name'],
             'tag' => $release['tag_name'],
             'published_at' => date('d/m/Y H:i', strtotime($release['published_at'])),
             'body' => $release['body'],
-            'download_url' => $release['zipball_url'],
+            'download_url' => $main_branch_download,  // Sempre do branch main
+            'release_download_url' => $release['zipball_url'],  // URL da release (backup)
             'html_url' => $release['html_url']
         ]
     ]);

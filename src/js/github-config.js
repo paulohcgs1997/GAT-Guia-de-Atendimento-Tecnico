@@ -33,12 +33,14 @@ function parseGithubUrl(url) {
 
 // Mostrar seção de configuração
 function showGithubConfig() {
+    console.log('🔧 showGithubConfig chamado');
     const section = document.getElementById('githubConfigSection');
+    console.log('githubConfigSection:', section);
     if (section) {
         section.style.display = 'block';
         loadCurrentGithubConfig();
     } else {
-        console.error('Elemento githubConfigSection não encontrado');
+        console.error('❌ Elemento githubConfigSection não encontrado');
     }
 }
 
@@ -78,6 +80,7 @@ async function loadCurrentGithubConfig() {
 // Salvar configuração do GitHub
 async function saveGithubConfig(event) {
     event.preventDefault();
+    console.log('💾 saveGithubConfig iniciado');
     
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -85,8 +88,12 @@ async function saveGithubConfig(event) {
     const urlInput = document.getElementById('github_url');
     const url = urlInput.value.trim();
     
+    console.log('📝 URL fornecida:', url);
+    
     // Validar URL antes de enviar
     const parsed = parseGithubUrl(url);
+    console.log('🔍 URL parsed:', parsed);
+    
     if (!parsed) {
         alert('❌ URL do GitHub inválida!\n\nUse o formato:\nhttps://github.com/usuario/repositorio');
         return;

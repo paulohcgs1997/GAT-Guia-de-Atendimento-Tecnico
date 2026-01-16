@@ -219,7 +219,12 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                             <h3 class="mb-2">
                                 <i class="bi bi-cloud-download"></i> Atualizador de Sistema
                             </h3>
-                            <p class="text-muted mb-0">Mantenha seu sistema atualizado com as últimas melhorias do GitHub</p>
+                            <p class="text-muted mb-0">
+                                Mantenha seu sistema atualizado com as últimas melhorias do GitHub
+                            </p>
+                            <small class="text-info">
+                                <i class="bi bi-git"></i> <strong>Branch:</strong> main (sempre atualiza do branch principal)
+                            </small>
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-outline-primary" onclick="showGithubConfig()">
@@ -324,6 +329,48 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <script src="../src/js/config-system.js"></script>
     <script src="../src/js/system-updater.js"></script>
     <script src="../src/js/github-config.js"></script>
+    
+    <!-- Teste de Debug -->
+    <script>
+        console.log('✅ Scripts carregados');
+        console.log('- checkSystemUpdates:', typeof checkSystemUpdates);
+        console.log('- showGithubConfig:', typeof showGithubConfig);
+        console.log('- saveGithubConfig:', typeof saveGithubConfig);
+        console.log('- tryAutoConfig:', typeof tryAutoConfig);
+        
+        // Teste: verificar se botões existem
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 DOM carregado');
+            console.log('- btnCheckUpdates:', document.getElementById('btnCheckUpdates'));
+            console.log('- githubConfigSection:', document.getElementById('githubConfigSection'));
+            console.log('- updateCheckResult:', document.getElementById('updateCheckResult'));
+            
+            // Auto-verificar atualizações quando a aba é ativada
+            const updatesTab = document.getElementById('updates-tab');
+            if (updatesTab) {
+                updatesTab.addEventListener('shown.bs.tab', function() {
+                    console.log('📑 Aba de Atualizações ativada');
+                    // Pequeno delay para garantir que elementos estejam prontos
+                    setTimeout(() => {
+                        if (typeof checkSystemUpdates === 'function') {
+                            console.log('🚀 Verificando atualizações automaticamente...');
+                            checkSystemUpdates();
+                        }
+                    }, 300);
+                });
+            }
+            
+            // Se a URL contém #updates-tab, ativar a aba e verificar
+            if (window.location.hash === '#updates-tab') {
+                console.log('🔗 Hash #updates-tab detectado na URL');
+                setTimeout(() => {
+                    const tabTrigger = new bootstrap.Tab(updatesTab);
+                    tabTrigger.show();
+                }, 100);
+            }
+        });
+    </script>
+    
     <!-- Bootstrap cuida da navegação das tabs automaticamente -->
 </body>
 
