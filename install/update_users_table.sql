@@ -11,5 +11,3 @@ ADD COLUMN `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIM
 -- Atualizar usuários existentes com email padrão baseado no username
 UPDATE `usuarios` SET `email` = CONCAT(`user`, '@sistema.local') WHERE `email` IS NULL;
 
--- Adicionar índice para email
-ALTER TABLE `usuarios` ADD UNIQUE KEY `email` (`email`);
