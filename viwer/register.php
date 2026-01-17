@@ -125,7 +125,7 @@ if (!isset($systemName)) {
             </form>
             
             <!-- Mensagens -->
-            <div id="mensagem"></div>
+            <div id="mensagem" style="margin-top: 20px;"></div>
             
             <!-- Link para Login -->
             <div style="text-align: center; margin-top: 20px;">
@@ -233,17 +233,24 @@ if (!isset($systemName)) {
             .then(text => {
                 console.log('Response text:', text);
                 
+                loginContainer.style.display = 'block';
+                loadingScreen.classList.remove('active');
+                
                 // Tentar fazer parse do JSON
                 let data;
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
                     console.error('Erro ao fazer parse do JSON:', e);
-                    throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                    console.error('Texto recebido:', text);
+                    mensagemDiv.innerHTML = `
+                        <div style="padding: 20px; margin: 20px 0; border-radius: 8px; background: #fee2e2; border: 2px solid #ef4444; color: #991b1b;">
+                            <strong>❌ Erro:</strong> Resposta inválida do servidor.<br>
+                            <small>Verifique o console para mais detalhes.</small>
+                        </div>
+                    `;
+                    return;
                 }
-                
-                loginContainer.style.display = 'block';
-                loadingScreen.classList.remove('active');
                 
                 console.log('Data recebida:', data);
                 
@@ -254,26 +261,27 @@ if (!isset($systemName)) {
                     
                     // Mostrar mensagem de sucesso grande e visível
                     mensagemDiv.innerHTML = `
-                        <div class="alert alert-success" style="padding: 20px; margin: 20px 0; border-radius: 8px; background: #d1fae5; border: 2px solid #10b981;">
-                            <div style="text-align: center;">
-                                <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
-                                <h3 style="color: #065f46; margin: 10px 0;">Cadastro realizado com sucesso!</h3>
-                                <p style="color: #047857; font-size: 16px; margin: 15px 0;">
-                                    ${data.message || 'Sua conta será ativada após aprovação do administrador.'}
-                                </p>
-                                <a href="login.php" class="btn btn-primary" style="margin-top: 15px; padding: 12px 30px; font-size: 16px; text-decoration: none; display: inline-block; background: var(--primary-color); color: white; border-radius: 6px;">
-                                    Ir para Login
-                                </a>
-                            </div>
+                        <div style="padding: 30px; margin: 20px 0; border-radius: 12px; background: #d1fae5; border: 3px solid #10b981; text-align: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                            <div style="font-size: 64px; margin-bottom: 15px; animation: bounce 1s;">✓</div>
+                            <h3 style="color: #065f46; margin: 10px 0; font-size: 24px; font-weight: bold;">Cadastro Realizado com Sucesso!</h3>
+                            <p style="color: #047857; font-size: 16px; margin: 15px 0; line-height: 1.6;">
+                                ${data.message || 'Sua conta será ativada após aprovação do administrador.'}
+                            </p>
+                            <a href="login.php" style="margin-top: 20px; padding: 14px 35px; font-size: 16px; text-decoration: none; display: inline-block; background: #1a365d; color: white; border-radius: 8px; font-weight: 600; transition: all 0.3s; box-shadow: 0 2px 8px rgba(26, 54, 93, 0.3);">
+                                Ir para Login →
+                            </a>
                         </div>
                     `;
                     
-                    // Scroll para a mensagem
-                    mensagemDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Scroll suave para a mensagem
+                    setTimeout(() => {
+                        mensagemDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
                 } else {
                     mensagemDiv.innerHTML = `
-                        <div class="alert alert-danger" style="padding: 15px; margin: 15px 0; border-radius: 6px; background: #fee2e2; border: 2px solid #ef4444; color: #991b1b;">
-                            <strong>❌ Erro:</strong> ${data.erro || data.error || 'Erro desconhecido'}
+                        <div style="padding: 20px; margin: 20px 0; border-radius: 8px; background: #fee2e2; border: 2px solid #ef4444; color: #991b1b;">
+                            <strong style="font-size: 18px;">❌ Erro no Cadastro</strong><br>
+                            <p style="margin: 10px 0;">${data.erro || data.error || 'Erro desconhecido'}</p>
                         </div>
                     `;
                 }
