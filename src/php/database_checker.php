@@ -1,7 +1,7 @@
 <?php
 /**
  * Verificador de Estrutura do Banco de Dados
- * Compara a estrutura atual com a esperada e identifica diferenças
+ * Lê arquivos SQL da pasta install e verifica quais precisam ser aplicados
  */
 
 session_start();
@@ -23,101 +23,102 @@ $response = [
 ];
 
 try {
-    // ========== DEFINIR ESTRUTURA ESPERADA ==========
+    // ========== LER ARQUIVOS SQL DA PASTA INSTALL ==========
     
-    $expected_structure = [
-        'blocos' => [
-            'status' => "ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft'"
-        ],
-        'services' => [
-            'status' => "ENUM('draft', 'pending', 'approved', 'rejected') DEFAULT 'draft'"
-        ],
-        'usuarios' => [
-            'force_password_change' => "TINYINT(1) DEFAULT 0"
-        ],
-        'steps' => [
-            // Adicione aqui novos campos para steps se necessário
-        ],
-        'questions' => [
-            // Adicione aqui novos campos para questions se necessário
-        ]
-    ];
+    $install_dir = __DIR__ . '/../../install';
+    $sql_files = glob($install_dir . '/*.sql');
     
-    // ========== VERIFICAR TABELAS EXISTENTES ==========
+    // Ignorar arquivo principal database.sql
+    $sql_files = array_filter($sql_files, function($file) {
+        return basename($file) !== 'database.sql';
+    });
     
-    $tables_query = $mysqli->query("SHOW TABLES");
+    // ========== BUSCAR TABELAS E COLUNAS EXISTENTES ==========
+    
     $existing_tables = [];
+    $tables_query = $mysqli->query("SHOW TABLES");
     while ($row = $tables_query->fetch_array()) {
-        $existing_tables[] = $row[0];
-    }
-    
-    // ========== VERIFICAR COLUNAS EM CADA TABELA ==========
-    
-    foreach ($expected_structure as $table => $expected_columns) {
-        // Verificar se a tabela existe
-        if (!in_array($table, $existing_tables)) {
-            $response['missing_tables'][] = $table;
-            $response['needs_update'] = true;
-            continue;
-        }
+        $table_name = $row[0];
+        $existing_tables[$table_name] = [];
         
-        // Verificar colunas da tabela
-        $columns_query = $mysqli->query("SHOW COLUMNS FROM `$table`");
-        $existing_columns = [];
-        
+        // Buscar colunas da tabela
+        $columns_query = $mysqli->query("SHOW COLUMNS FROM `$table_name`");
         while ($col = $columns_query->fetch_assoc()) {
-            $existing_columns[] = $col['Field'];
-        }
-        
-        // Verificar quais colunas estão faltando
-        foreach ($expected_columns as $column_name => $column_definition) {
-            if (!in_array($column_name, $existing_columns)) {
-                $response['missing_columns'][] = [
-                    'table' => $table,
-                    'column' => $column_name,
-                    'definition' => $column_definition
-                ];
-                $response['needs_update'] = true;
-            }
+            $existing_tables[$table_name][] = $col['Field'];
         }
     }
     
-    // ========== GERAR LISTA DE ATUALIZAÇÕES DISPONÍVEIS ==========
+    // ========== ANALISAR CADA ARQUIVO SQL ==========
     
-    $updates_map = [
-        'status_field' => [
-            'id' => 'status_field',
-            'name' => 'Sistema de Status para Tutoriais e Serviços',
-            'description' => 'Adiciona campo status (draft, pending, approved, rejected) para melhor controle do fluxo de aprovação',
-            'tables_affected' => ['blocos', 'services'],
-            'file' => 'update_status_field.sql',
-            'priority' => 'high'
-        ],
-        'force_password_change' => [
-            'id' => 'force_password_change',
-            'name' => 'Sistema de Troca de Senha Obrigatória',
-            'description' => 'Adiciona campo force_password_change para forçar usuários a trocarem senha no primeiro login',
-            'tables_affected' => ['usuarios'],
-            'file' => 'add_force_password_change.sql',
-            'priority' => 'medium'
-        ]
-    ];
-    
-    // Verificar quais atualizações são necessárias
-    $missing_tables_set = array_flip($response['missing_tables']);
-    
-    foreach ($response['missing_columns'] as $missing) {
-        $table = $missing['table'];
-        $column = $missing['column'];
+    foreach ($sql_files as $sql_file) {
+        $filename = basename($sql_file);
+        $sql_content = file_get_contents($sql_file);
         
-        // Mapear coluna para update
-        if ($column === 'status' && ($table === 'blocos' || $table === 'services')) {
-            if (!in_array($updates_map['status_field'], $response['updates_available'], true)) {
-                $response['updates_available'][] = $updates_map['status_field'];
+        // Extrair comentários do início do arquivo (descrição)
+        preg_match_all('/^--\s*(.+)$/m', $sql_content, $comments);
+        $description = implode(' ', $comments[1]);
+        
+        // Detectar tipo de operação e tabelas afetadas
+        $needs_update = false;
+        $tables_affected = [];
+        $missing_items = [];
+        
+        // Verificar ALTER TABLE
+        if (preg_match_all('/ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+(?:COLUMN\s+)?`?(\w+)`?/i', $sql_content, $matches)) {
+            for ($i = 0; $i < count($matches[0]); $i++) {
+                $table = $matches[1][$i];
+                $column = $matches[2][$i];
+                
+                if (!isset($existing_tables[$table])) {
+                    $needs_update = true;
+                    $missing_items[] = "Tabela '$table' não existe";
+                    $tables_affected[] = $table;
+                } elseif (!in_array($column, $existing_tables[$table])) {
+                    $needs_update = true;
+                    $missing_items[] = "Coluna '$column' em '$table'";
+                    $tables_affected[] = $table;
+                }
             }
-        } elseif ($column === 'force_password_change' && $table === 'usuarios') {
-            if (!in_array($updates_map['force_password_change'], $response['updates_available'], true)) {
-                $response['updates_available'][] = $updates_map['force_password_change'];
+        }
+        
+        // Verificar CREATE TABLE
+        if (preg_match_all('/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?/i', $sql_content, $matches)) {
+            foreach ($matches[1] as $table) {
+                if (!isset($existing_tables[$table])) {
+                    $needs_update = true;
+                    $missing_items[] = "Tabela '$table' não existe";
+                    $tables_affected[] = $table;
+                }
+            }
+        }
+        
+        // Se precisa atualizar, adicionar à lista
+        if ($needs_update) {
+            $response['needs_update'] = true;
+            
+            // Determinar prioridade baseado no nome do arquivo
+            $priority = 'medium';
+            if (strpos($filename, 'status') !== false || strpos($filename, 'users') !== false) {
+                $priority = 'high';
+            }
+            
+            $response['updates_available'][] = [
+                'id' => pathinfo($filename, PATHINFO_FILENAME),
+                'name' => ucwords(str_replace(['_', 'update', 'add'], [' ', '', ''], pathinfo($filename, PATHINFO_FILENAME))),
+                'description' => !empty($description) ? $description : 'Atualização de banco de dados',
+                'tables_affected' => array_unique($tables_affected),
+                'file' => $filename,
+                'priority' => $priority,
+                'missing_items' => $missing_items
+            ];
+            
+            // Adicionar aos missing_columns para compatibilidade
+            foreach ($missing_items as $item) {
+                if (strpos($item, 'Coluna') !== false) {
+                    $response['missing_columns'][] = $item;
+                } elseif (strpos($item, 'Tabela') !== false) {
+                    $response['missing_tables'][] = str_replace(["Tabela '", "' não existe"], '', $item);
+                }
             }
         }
     }
@@ -127,7 +128,8 @@ try {
     $response['database_info'] = [
         'name' => $mysqli->get_connection_stats()['db'] ?? 'N/A',
         'total_tables' => count($existing_tables),
-        'checked_tables' => count($expected_structure)
+        'sql_files_checked' => count($sql_files),
+        'updates_pending' => count($response['updates_available'])
     ];
     
 } catch (Exception $e) {
