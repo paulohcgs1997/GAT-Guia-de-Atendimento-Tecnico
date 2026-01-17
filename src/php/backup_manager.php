@@ -1,4 +1,21 @@
 <?php
+// Desabilitar exibição de erros HTML
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+
+// Log customizado para debug
+$debug_log = __DIR__ . '/../../backups/backup_debug.log';
+
+function debug_log($message) {
+    global $debug_log;
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($debug_log, "[$timestamp] $message\n", FILE_APPEND);
+}
+
+debug_log('===== Backup Manager Iniciado =====');
+debug_log('Action: ' . ($_GET['action'] ?? $_POST['action'] ?? 'none'));
+
 session_start();
 
 // Verificar se está logado e se é admin
@@ -103,71 +120,163 @@ if ($action === 'create') {
 
 // ========== RESTAURAR BACKUP ==========
 if ($action === 'restore') {
+    debug_log('Iniciando restauração de backup');
+    
     try {
+        // Verificar extensão ZipArchive
+        if (!class_exists('ZipArchive')) {
+            debug_log('ERRO: ZipArchive não disponível');
+            throw new Exception('Extensão ZIP não está habilitada no PHP. Execute: habilitar extensão zip no php.ini');
+        }
+        debug_log('ZipArchive disponível');
+        
         $filename = $_POST['filename'] ?? '';
+        debug_log('Filename recebido: ' . $filename);
+        
         if (empty($filename)) {
             throw new Exception('Nome do arquivo não fornecido');
         }
         
-        $backup_path = $backups_dir . '/' . basename($filename);
+        // Sanitizar nome do arquivo
+        $filename = basename($filename);
+        $backup_path = $backups_dir . '/' . $filename;
+        debug_log('Caminho do backup: ' . $backup_path);
+        
         if (!file_exists($backup_path)) {
-            throw new Exception('Arquivo de backup não encontrado');
+            debug_log('ERRO: Arquivo não encontrado');
+            throw new Exception('Arquivo de backup não encontrado: ' . $filename);
         }
+        debug_log('Arquivo existe');
+        
+        if (!is_readable($backup_path)) {
+            debug_log('ERRO: Sem permissão de leitura');
+            throw new Exception('Sem permissão para ler o arquivo de backup');
+        }
+        debug_log('Arquivo legível');
         
         // Criar um backup do estado atual antes de restaurar
+        debug_log('Criando backup de segurança...');
         $safety_backup = 'backup_before_restore_' . date('Y-m-d_H-i-s') . '.zip';
         $safety_path = $backups_dir . '/' . $safety_backup;
         
         $zip = new ZipArchive();
         if ($zip->open($safety_path, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            debug_log('Adicionando arquivos ao backup de segurança...');
             addFilesToZip($zip, $root_dir, '', ['backups', '.git', 'node_modules']);
             $zip->close();
+            debug_log('Backup de segurança criado: ' . $safety_backup);
+        } else {
+            debug_log('AVISO: Não foi possível criar backup de segurança');
         }
         
         // Extrair o backup
+        debug_log('Abrindo arquivo de backup para restauração...');
         $zip = new ZipArchive();
-        if ($zip->open($backup_path) !== TRUE) {
-            throw new Exception('Não foi possível abrir o arquivo de backup');
+        $open_result = $zip->open($backup_path);
+        
+        if ($open_result !== TRUE) {
+            $error_messages = [
+                ZipArchive::ER_EXISTS => 'Arquivo já existe',
+                ZipArchive::ER_INCONS => 'ZIP inconsistente',
+                ZipArchive::ER_INVAL => 'Argumento inválido',
+                ZipArchive::ER_MEMORY => 'Erro de memória',
+                ZipArchive::ER_NOENT => 'Arquivo não existe',
+                ZipArchive::ER_NOZIP => 'Não é um arquivo ZIP',
+                ZipArchive::ER_OPEN => 'Não foi possível abrir o arquivo',
+                ZipArchive::ER_READ => 'Erro de leitura',
+                ZipArchive::ER_SEEK => 'Erro de posicionamento'
+            ];
+            
+            $error_msg = $error_messages[$open_result] ?? 'Erro desconhecido: ' . $open_result;
+            debug_log('ERRO ao abrir ZIP: ' . $error_msg);
+            throw new Exception('Não foi possível abrir o backup: ' . $error_msg);
         }
+        debug_log('Arquivo ZIP aberto com sucesso');
         
         // Extrair para um diretório temporário primeiro
         $temp_dir = $root_dir . '/temp_restore_' . time();
-        mkdir($temp_dir, 0755, true);
+        debug_log('Criando diretório temporário: ' . $temp_dir);
         
-        $zip->extractTo($temp_dir);
+        if (!mkdir($temp_dir, 0755, true)) {
+            debug_log('ERRO: Falha ao criar diretório temporário');
+            throw new Exception('Não foi possível criar diretório temporário');
+        }
+        debug_log('Diretório temporário criado');
+        
+        debug_log('Extraindo arquivos...');
+        if (!$zip->extractTo($temp_dir)) {
+            debug_log('ERRO: Falha na extração');
+            throw new Exception('Erro ao extrair arquivos do backup');
+        }
+        debug_log('Arquivos extraídos com sucesso');
+        
         $zip->close();
         
-        // Encontrar o diretório raiz extraído (pode ter um nome de repositório)
+        // Encontrar o diretório raiz extraído
+        debug_log('Procurando diretório raiz extraído...');
         $extracted_root = $temp_dir;
         $contents = scandir($temp_dir);
-        if (count($contents) == 3) { // . .. e uma pasta
+        debug_log('Conteúdo do temp_dir: ' . implode(', ', $contents));
+        
+        if ($contents && count($contents) == 3) {
             $possible_root = $temp_dir . '/' . $contents[2];
             if (is_dir($possible_root)) {
                 $extracted_root = $possible_root;
+                debug_log('Diretório raiz ajustado para: ' . $extracted_root);
             }
         }
         
-        // Copiar arquivos do backup para o sistema (preservando conexao.php e backups)
-        copyDirectory($extracted_root, $root_dir, [
+        // Copiar arquivos
+        debug_log('Iniciando cópia de arquivos...');
+        $copy_result = copyDirectory($extracted_root, $root_dir, [
             'src/config/conexao.php',
             'src/config/github_config.php',
             'backups'
         ]);
         
+        if (!$copy_result) {
+            debug_log('ERRO: Falha ao copiar arquivos');
+            throw new Exception('Erro ao copiar arquivos do backup');
+        }
+        debug_log('Arquivos copiados com sucesso');
+        
         // Limpar diretório temporário
+        debug_log('Limpando diretório temporário...');
         deleteDirectory($temp_dir);
+        debug_log('Diretório temporário removido');
         
         // Manter apenas os 3 mais recentes
+        debug_log('Limpando backups antigos...');
         cleanOldBackups($backups_dir, 3);
+        
+        debug_log('===== Restauração concluída com SUCESSO =====');
         
         echo json_encode([
             'success' => true,
-            'message' => 'Backup restaurado com sucesso',
+            'message' => 'Backup restaurado com sucesso! A página será recarregada.',
             'safety_backup' => $safety_backup
         ]);
         
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        debug_log('ERRO Exception: ' . $e->getMessage());
+        debug_log('Arquivo: ' . $e->getFile() . ' Linha: ' . $e->getLine());
+        debug_log('Stack: ' . $e->getTraceAsString());
+        
+        echo json_encode([
+            'success' => false, 
+            'error' => $e->getMessage(),
+            'debug_log' => 'Veja backups/backup_debug.log para detalhes'
+        ]);
+    } catch (Throwable $e) {
+        debug_log('ERRO Throwable: ' . $e->getMessage());
+        debug_log('Arquivo: ' . $e->getFile() . ' Linha: ' . $e->getLine());
+        debug_log('Stack: ' . $e->getTraceAsString());
+        
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erro fatal: ' . $e->getMessage(),
+            'debug_log' => 'Veja backups/backup_debug.log para detalhes'
+        ]);
     }
     exit;
 }

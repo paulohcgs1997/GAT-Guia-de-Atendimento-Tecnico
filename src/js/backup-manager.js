@@ -180,12 +180,19 @@ async function restoreBackup(filename) {
     `;
     
     try {
-        const response = await fetch('../src/php/backup_manager.php?action=restore', {
+        const formData = new FormData();
+        formData.append('action', 'restore');
+        formData.append('filename', filename);
+        
+        const response = await fetch('../src/php/backup_manager.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'filename=' + encodeURIComponent(filename)
+            body: formData
         });
-        const data = await response.json();
+        
+        const text = await response.text();
+        console.log('Resposta do servidor:', text);
+        
+        const data = JSON.parse(text);
         
         if (!data.success) {
             throw new Error(data.error || 'Erro ao restaurar backup');

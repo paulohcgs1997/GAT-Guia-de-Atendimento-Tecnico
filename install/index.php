@@ -244,7 +244,7 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
 
         <div class="content">
             <div class="progress-bar">
-                <div class="progress-bar-fill" id="progressBar" style="width: 33%"></div>
+                <div class="progress-bar-fill" id="progressBar" style="width: 25%"></div>
             </div>
 
             
@@ -254,15 +254,33 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
             </div>
             <?php endif; ?>
             <div class="step-indicator">
-                <div class="step-dot active" id="dot1"></div>
+                <div class="step-dot active" id="dot0"></div>
+                <div class="step-dot" id="dot1"></div>
                 <div class="step-dot" id="dot2"></div>
                 <div class="step-dot" id="dot3"></div>
             </div>
 
             <div id="alertContainer"></div>
 
+            <!-- Passo 0: Verificação de Requisitos -->
+            <div class="step active" id="step0">
+                <h2 style="margin-bottom: 20px; color: #333;">🔍 Verificação de Requisitos</h2>
+                <p style="color: #666; margin-bottom: 20px;">Verificando se o servidor atende todos os requisitos do sistema...</p>
+                
+                <div id="requirementsCheck">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p style="color: #666;">Analisando servidor...</p>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn" id="btnContinueSetup" style="display: none;" onclick="goToStep(1)">
+                    Continuar com Instalação →
+                </button>
+            </div>
+
             <!-- Passo 1: Configuração do Banco de Dados -->
-            <div class="step active" id="step1">
+            <div class="step" id="step1">
                 <h2 style="margin-bottom: 20px; color: #333;">Configuração do Banco de Dados</h2>
                 
                 <form id="dbForm">
@@ -382,7 +400,144 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
 
     <script>
         let dbConfig = {};
-        let currentStep = 1;
+        let currentStep = 0;
+        let requirementsData = null;
+        
+        // Verificar requisitos ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            checkRequirements();
+        });
+        
+        async function checkRequirements() {
+            const checkDiv = document.getElementById('requirementsCheck');
+            
+            try {
+                const response = await fetch('check_requirements.php');
+                const data = await response.json();
+                requirementsData = data;
+                
+                let html = '';
+                
+                // Extensões PHP
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📦 Extensões PHP</h3>';
+                html += '<table style="width: 100%; font-size: 14px; border-collapse: collapse;">';
+                
+                for (const [key, req] of Object.entries(data.requirements)) {
+                    const icon = req.status ? '✅' : (req.critical ? '❌' : '⚠️');
+                    const statusClass = req.status ? 'success' : (req.critical ? 'error' : 'warning');
+                    
+                    html += `
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 5px;">${icon} <strong>${req.name}</strong></td>
+                            <td style="padding: 10px 5px; text-align: right; color: ${req.status ? '#4caf50' : (req.critical ? '#f44336' : '#ff9800')}">${req.current}</td>
+                        </tr>
+                    `;
+                    if (!req.status && req.message) {
+                        html += `
+                            <tr>
+                                <td colspan="2" style="padding: 5px 5px 10px 25px; font-size: 12px; color: #666;">
+                                    ${req.message}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+                html += '</table></div>';
+                
+                // Configurações PHP
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 8px;">⚙️ Configurações PHP</h3>';
+                html += '<table style="width: 100%; font-size: 14px; border-collapse: collapse;">';
+                
+                for (const [key, config] of Object.entries(data.php_config)) {
+                    const icon = config.status ? '✅' : (config.critical ? '❌' : '⚠️');
+                    
+                    html += `
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 5px;">${icon} <strong>${config.name}</strong></td>
+                            <td style="padding: 10px 5px; text-align: right; color: ${config.status ? '#4caf50' : (config.critical ? '#f44336' : '#ff9800')}">${config.current}</td>
+                        </tr>
+                    `;
+                    if (!config.status && config.message) {
+                        html += `
+                            <tr>
+                                <td colspan="2" style="padding: 5px 5px 10px 25px; font-size: 12px; color: #666;">
+                                    ${config.message}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+                html += '</table></div>';
+                
+                // Permissões de Diretórios
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h3 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📁 Permissões de Diretórios</h3>';
+                html += '<table style="width: 100%; font-size: 14px; border-collapse: collapse;">';
+                
+                for (const [key, dir] of Object.entries(data.directories)) {
+                    const status = dir.exists && dir.writable;
+                    const icon = status ? '✅' : '❌';
+                    const statusText = !dir.exists ? 'Não existe' : (!dir.writable ? 'Sem permissão de escrita' : 'OK');
+                    
+                    html += `
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px 5px;">${icon} <strong>${key}</strong></td>
+                            <td style="padding: 10px 5px; text-align: right; color: ${status ? '#4caf50' : '#f44336'}">${statusText}</td>
+                        </tr>
+                    `;
+                }
+                html += '</table></div>';
+                
+                // Informações do Servidor
+                html += '<div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">';
+                html += '<h4 style="margin: 0 0 10px 0; color: #333;">ℹ️ Informações do Servidor</h4>';
+                html += `<div style="font-size: 13px; color: #666;">`;
+                html += `<div><strong>OS:</strong> ${data.server_info.os}</div>`;
+                html += `<div><strong>Servidor:</strong> ${data.server_info.server_software}</div>`;
+                html += `<div><strong>PHP SAPI:</strong> ${data.server_info.php_sapi}</div>`;
+                html += `<div><strong>php.ini:</strong> ${data.server_info.php_ini || 'Não encontrado'}</div>`;
+                html += `</div></div>`;
+                
+                // Resumo
+                if (data.can_install) {
+                    html += `
+                        <div class="alert alert-success" style="text-align: center;">
+                            <strong>✅ Todos os requisitos foram atendidos!</strong><br>
+                            Você pode prosseguir com a instalação.
+                        </div>
+                    `;
+                    document.getElementById('btnContinueSetup').style.display = 'block';
+                } else {
+                    html += `
+                        <div class="alert alert-error">
+                            <strong>❌ Requisitos críticos não atendidos</strong><br>
+                            Corrija os itens marcados com ❌ acima antes de continuar.
+                        </div>
+                    `;
+                }
+                
+                if (data.warnings.length > 0) {
+                    html += `
+                        <div class="alert alert-info" style="margin-top: 15px;">
+                            <strong>⚠️ Avisos (${data.warnings.length})</strong><br>
+                            Alguns recursos opcionais não estão disponíveis mas o sistema pode funcionar.
+                        </div>
+                    `;
+                }
+                
+                checkDiv.innerHTML = html;
+                
+            } catch (error) {
+                checkDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <strong>Erro ao verificar requisitos:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
 
         // Form 1: Configuração do Banco
         document.getElementById('dbForm').addEventListener('submit', async (e) => {
@@ -516,7 +671,7 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
             document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
             document.getElementById('dot' + Math.min(step, 3)).classList.add('active');
             
-            const progress = (step / 3) * 100;
+            const progress = (step / 4) * 100;
             document.getElementById('progressBar').style.width = progress + '%';
             
             currentStep = step;

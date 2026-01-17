@@ -84,14 +84,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         formData.append('action', 'save_config');
         
-        // Adicionar configuração do GitHub se preenchida
-        const githubOwner = document.getElementById('github_owner').value;
-        const githubRepo = document.getElementById('github_repo').value;
+        // Adicionar configuração do GitHub se os campos existirem
+        const githubOwnerEl = document.getElementById('github_owner');
+        const githubRepoEl = document.getElementById('github_repo');
         
-        if (githubOwner && githubRepo) {
+        if (githubOwnerEl && githubRepoEl && githubOwnerEl.value && githubRepoEl.value) {
             formData.append('github_repository', JSON.stringify({
-                owner: githubOwner,
-                repo: githubRepo
+                owner: githubOwnerEl.value,
+                repo: githubRepoEl.value
             }));
         }
         

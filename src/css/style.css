@@ -4267,7 +4267,7 @@ button:disabled {
 }
 
 .loading-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -4277,7 +4277,7 @@ button:disabled {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 999;
+    z-index: 9999;
 }
 
 .loading-spinner {
