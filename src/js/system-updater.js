@@ -81,13 +81,14 @@ async function checkSystemUpdates() {
                     </div>
                 </div>
                 
+                ${data.release_info ? `
                 <div class="card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-0">
-                                <i class="bi bi-megaphone"></i> ${data.release_info.name}
+                                <i class="bi bi-megaphone"></i> ${data.release_info.name || 'Nova versão'}
                             </h5>
-                            <small>Publicado em ${data.release_info.published_at}</small>
+                            <small>Publicado em ${data.release_info.published_at || 'Data desconhecida'}</small>
                         </div>
                         <span class="badge bg-light text-dark">
                             <i class="bi bi-code-slash"></i> ${data.branch || 'main'}
@@ -100,46 +101,42 @@ ${data.release_info.body || 'Sem descrição disponível'}
                         </div>
                     </div>
                     <div class="card-footer d-flex gap-2 justify-content-between">
-                        <a href="${data.release_info.html_url}" target="_blank" class="btn btn-outline-secondary">
+                        <a href="${data.release_info.html_url || '#'}" target="_blank" class="btn btn-outline-secondary">
                             <i class="bi bi-github"></i> Ver no GitHub
                         </a>
-                        <button class="btn btn-success" onclick="applySystemUpdate('${data.release_info.download_url}', '${data.latest_version}')">
+                        <button class="btn btn-success" onclick="applySystemUpdate('${data.release_info.download_url || data.download_url}', '${data.latest_version}')">
                             <i class="bi bi-download"></i> Baixar e Instalar
                         </button>
                     </div>
                 </div>
-            `;
-            
-            // Mostrar botão de aplicar atualização
-            document.getElementById('btnApplyUpdate')?.remove();
-            
-        } else if (data.last_commit) {
-            // Versão de desenvolvimento
-            resultDiv.innerHTML = `
-                <div class="alert alert-info d-flex align-items-start" role="alert">
-                    <i class="bi bi-code-slash me-2" style="font-size: 32px;"></i>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong>Versão de Desenvolvimento</strong>
-                            <span class="badge bg-primary">
-                                <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
-                            </span>
-                        </div>
-                        <p class="mb-2">${data.message}</p>
+                ` : ''}
+                
+                ${data.last_commit ? `
+                <div class="card mt-3">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="bi bi-git"></i> Último Commit</h6>
+                    </div>
+                    <div class="card-body">
                         <div class="small">
-                            <strong>Último commit:</strong> ${data.last_commit.sha}<br>
-                            <strong>Mensagem:</strong> ${data.last_commit.message}<br>
-                            <strong>Autor:</strong> ${data.last_commit.author}<br>
-                            <strong>Data:</strong> ${data.last_commit.date}
+                            <strong>Hash:</strong> ${data.last_commit.sha || 'desconhecido'}<br>
+                            <strong>Mensagem:</strong> ${data.last_commit.message || 'Sem mensagem'}<br>
+                            <strong>Autor:</strong> ${data.last_commit.author || 'Desconhecido'}<br>
+                            <strong>Data:</strong> ${data.last_commit.date || 'Data desconhecida'}
                         </div>
+                        ${!data.release_info ? `
                         <div class="mt-3">
-                            <button class="btn btn-sm btn-outline-primary" onclick="applySystemUpdate('${data.download_url}', 'main')">
-                                <i class="bi bi-download"></i> Baixar Branch Main
+                            <button class="btn btn-success" onclick="applySystemUpdate('${data.download_url}', '${data.remote_build}')">
+                                <i class="bi bi-download"></i> Baixar e Instalar
                             </button>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
+                ` : ''}
             `;
+            
+            // Remover botão de aplicar atualização se existir
+            document.getElementById('btnApplyUpdate')?.remove();
         } else {
             // Sistema atualizado
             resultDiv.innerHTML = `

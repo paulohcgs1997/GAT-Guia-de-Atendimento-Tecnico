@@ -125,11 +125,11 @@ try {
     // Comparar commits: se o hash local é diferente do remoto, há atualização
     $local_hash_short = ($local_commit_hash !== 'desconhecido') ? substr($local_commit_hash, 0, 7) : 'desconhecido';
     
-    // Se o hash local é desconhecido, considerar que há atualização disponível
-    // Se os hashes são diferentes, há atualização
+    // Se o hash local é desconhecido, NÃO considerar como atualização automática
+    // (evita falso positivo quando não há .git ou .last_update)
     if ($local_hash_short === 'desconhecido') {
-        $has_update = true;
-        error_log('Hash local desconhecido - considerando atualização disponível');
+        $has_update = false;
+        error_log('Hash local desconhecido - sem informação para comparar. Considerar sistema atualizado.');
     } else {
         $has_update = ($local_hash_short !== $remote_commit_hash);
         error_log('Comparação: Local=' . $local_hash_short . ' vs Remoto=' . $remote_commit_hash . ' | Tem update: ' . ($has_update ? 'SIM' : 'NÃO'));
