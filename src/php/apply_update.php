@@ -327,15 +327,139 @@ try {
     file_put_contents($version_file, json_encode($version_info, JSON_PRETTY_PRINT));
     error_log('📝 Informações da versão salvas em .last_update: ' . json_encode($version_info));
     
+    // PASSO 6: APLICAR ATUALIZAÇÕES DE BANCO DE DADOS
+    error_log('Verificando atualizações de banco de dados...');
+    
+    $db_updates_applied = 0;
+    $db_updates_failed = [];
+    
+    try {
+        // Buscar arquivos SQL de migração na pasta install
+        $install_dir = $root_dir . DIRECTORY_SEPARATOR . 'install';
+        $sql_files = glob($install_dir . DIRECTORY_SEPARATOR . '*.sql');
+        
+        // Filtrar apenas arquivos de update (ignorar database.sql)
+        $sql_files = array_filter($sql_files, function($file) {
+            $basename = basename($file);
+            return $basename !== 'database.sql' && 
+                   (strpos($basename, 'update_') === 0 || strpos($basename, 'add_') === 0);
+        });
+        
+        if (count($sql_files) > 0) {
+            error_log('Encontrados ' . count($sql_files) . ' arquivo(s) de migração');
+            
+            // Verificar quais tabelas e colunas existem
+            $existing_tables = [];
+            $tables_query = $mysqli->query("SHOW TABLES");
+            while ($row = $tables_query->fetch_array()) {
+                $table_name = $row[0];
+                $existing_tables[$table_name] = [];
+                
+                $columns_query = $mysqli->query("SHOW COLUMNS FROM `$table_name`");
+                while ($col = $columns_query->fetch_assoc()) {
+                    $existing_tables[$table_name][] = $col['Field'];
+                }
+            }
+            
+            // Processar cada arquivo SQL
+            foreach ($sql_files as $sql_file) {
+                $filename = basename($sql_file);
+                $sql_content = file_get_contents($sql_file);
+                
+                // Verificar se há algo para aplicar
+                $needs_apply = false;
+                
+                // Verificar ALTER TABLE ADD COLUMN
+                if (preg_match_all('/ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+(?:COLUMN\s+)?`?(\w+)`?/i', $sql_content, $matches)) {
+                    for ($i = 0; $i < count($matches[0]); $i++) {
+                        $table = $matches[1][$i];
+                        $column = $matches[2][$i];
+                        
+                        if (isset($existing_tables[$table]) && !in_array($column, $existing_tables[$table])) {
+                            $needs_apply = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Verificar CREATE TABLE
+                if (preg_match_all('/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?/i', $sql_content, $matches)) {
+                    foreach ($matches[1] as $table) {
+                        if (!isset($existing_tables[$table])) {
+                            $needs_apply = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Se precisa aplicar, executar SQL
+                if ($needs_apply) {
+                    error_log("Aplicando migração: $filename");
+                    
+                    // Remover comentários
+                    $sql_content = preg_replace('/--[^\n]*\n/', "\n", $sql_content);
+                    
+                    // Dividir por comandos
+                    $queries = array_filter(array_map('trim', preg_split('/;[\s]*(\n|$)/', $sql_content)));
+                    
+                    $mysqli->begin_transaction();
+                    
+                    try {
+                        foreach ($queries as $query) {
+                            if (empty($query) || strlen($query) < 5) continue;
+                            
+                            if (!$mysqli->query($query)) {
+                                $error = $mysqli->error;
+                                
+                                // Ignorar erros de duplicação
+                                if (stripos($error, 'Duplicate') === false && 
+                                    stripos($error, 'already exists') === false) {
+                                    throw new Exception("Erro SQL: $error");
+                                }
+                            }
+                        }
+                        
+                        $mysqli->commit();
+                        $db_updates_applied++;
+                        error_log("✅ Migração aplicada: $filename");
+                        
+                    } catch (Exception $e) {
+                        $mysqli->rollback();
+                        $db_updates_failed[] = $filename . ': ' . $e->getMessage();
+                        error_log("❌ Erro ao aplicar $filename: " . $e->getMessage());
+                    }
+                } else {
+                    error_log("⏭️ Migração já aplicada: $filename");
+                }
+            }
+        }
+        
+    } catch (Exception $e) {
+        error_log('Erro ao verificar/aplicar migrações de BD: ' . $e->getMessage());
+        $db_updates_failed[] = 'Erro geral: ' . $e->getMessage();
+    }
+    
     // Limpar buffer final e enviar JSON
     ob_clean();
     
-    echo json_encode([
+    $response = [
         'success' => true,
         'message' => 'Atualização aplicada com sucesso!',
         'backup_file' => $backup_name,
         'backup_path' => 'backups/' . $backup_name
-    ]);
+    ];
+    
+    if ($db_updates_applied > 0) {
+        $response['db_updates_applied'] = $db_updates_applied;
+        $response['message'] .= " ($db_updates_applied migração(ões) de BD aplicada(s))";
+    }
+    
+    if (count($db_updates_failed) > 0) {
+        $response['db_updates_failed'] = $db_updates_failed;
+        $response['message'] .= ' Alguns updates de BD falharam - verifique manualmente.';
+    }
+    
+    echo json_encode($response);
     
 } catch (Exception $e) {
     ob_clean();
