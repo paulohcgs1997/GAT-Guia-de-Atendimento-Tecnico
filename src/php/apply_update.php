@@ -143,6 +143,23 @@ try {
     $zip->close();
     error_log('Backup criado com sucesso');
     
+    // Limpar backups antigos (manter apenas os 3 mais recentes)
+    error_log('Limpando backups antigos...');
+    $backup_files = glob($backup_dir . DIRECTORY_SEPARATOR . 'backup_*.zip');
+    
+    // Ordenar por data de modificação (mais recente primeiro)
+    usort($backup_files, function($a, $b) {
+        return filemtime($b) - filemtime($a);
+    });
+    
+    // Manter apenas os 3 mais recentes
+    $backups_to_delete = array_slice($backup_files, 3);
+    foreach ($backups_to_delete as $old_backup) {
+        if (unlink($old_backup)) {
+            error_log('Backup antigo excluído: ' . basename($old_backup));
+        }
+    }
+    
     // PASSO 2: BAIXAR ATUALIZAÇÃO
     error_log('Baixando atualização...');
     
