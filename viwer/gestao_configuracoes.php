@@ -23,7 +23,7 @@ check_permission_admin(); // Apenas admin pode alterar configurações
         <div class="gestao-container container-fluid">
             <div class="row">
                 <div class="col-12">
-                    <h1 class="mb-3">⚙️ Configurações do Sistema</h1>
+                    <h1 class="mb-3">⚙️ Configurações do Sistema dfghdfg dfgdfg d</h1>
                     <p class="text-muted mb-4">Personalize as informações do sistema</p>
                 </div>
             </div>
