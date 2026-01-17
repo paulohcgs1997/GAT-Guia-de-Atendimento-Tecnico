@@ -88,6 +88,9 @@ if (empty($download_url)) {
     exit;
 }
 
+error_log('========== INICIANDO ATUALIZAÇÃO DO SISTEMA ==========');
+error_log('URL de download: ' . $download_url);
+
 // Limpar buffer antes de começar processamento
 ob_clean();
 
@@ -198,9 +201,30 @@ try {
     $zip->close();
     
     // Encontrar diretório extraído (GitHub adiciona um diretório com nome do repo)
+    // O nome geralmente é: REPO-BRANCH (ex: GAT-Guia-de-Atendimento-Tecnico-dev)
     $extracted_dirs = glob($temp_dir . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR);
-    $update_files_dir = $extracted_dirs[0] ?? $temp_dir;
+    
+    if (empty($extracted_dirs)) {
+        throw new Exception('Nenhum diretório encontrado após extração');
+    }
+    
+    $update_files_dir = $extracted_dirs[0];
     error_log('Diretório extraído: ' . $update_files_dir);
+    
+    // Verificar se o diretório realmente existe e é acessível
+    if (!is_dir($update_files_dir)) {
+        error_log('ERRO: Diretório não é válido: ' . $update_files_dir);
+        error_log('Diretórios encontrados: ' . print_r($extracted_dirs, true));
+        throw new Exception('Diretório extraído não é válido');
+    }
+    
+    // Verificar se tem permissão de leitura
+    if (!is_readable($update_files_dir)) {
+        error_log('ERRO: Sem permissão de leitura no diretório: ' . $update_files_dir);
+        throw new Exception('Sem permissão de leitura no diretório extraído');
+    }
+    
+    error_log('Diretório validado e acessível');
     
     // PASSO 4: REMOVER ARQUIVOS ANTIGOS (EXCETO PROTEGIDOS)
     error_log('Removendo arquivos antigos...');
@@ -259,10 +283,29 @@ try {
     // PASSO 5: APLICAR NOVOS ARQUIVOS
     error_log('Aplicando arquivos novos...');
     
-    $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($update_files_dir, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::SELF_FIRST
-    );
+    // Verificar novamente antes de iterar
+    if (!is_dir($update_files_dir) || !is_readable($update_files_dir)) {
+        throw new Exception('Diretório de atualização não está acessível: ' . $update_files_dir);
+    }
+    
+    try {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($update_files_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+    } catch (Exception $e) {
+        error_log('ERRO ao criar iterador: ' . $e->getMessage());
+        error_log('Diretório tentado: ' . $update_files_dir);
+        error_log('Existe? ' . (file_exists($update_files_dir) ? 'SIM' : 'NÃO'));
+        error_log('É diretório? ' . (is_dir($update_files_dir) ? 'SIM' : 'NÃO'));
+        error_log('Legível? ' . (is_readable($update_files_dir) ? 'SIM' : 'NÃO'));
+        
+        // Listar conteúdo do temp_dir para debug
+        $temp_contents = scandir($temp_dir);
+        error_log('Conteúdo de temp_dir: ' . print_r($temp_contents, true));
+        
+        throw new Exception('Erro ao acessar diretório de atualização: ' . $e->getMessage());
+    }
     
     foreach ($files as $file) {
         $filePath = $file->getRealPath();
