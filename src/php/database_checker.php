@@ -23,15 +23,26 @@ $response = [
 ];
 
 try {
-    // ========== LER ARQUIVOS SQL DA PASTA INSTALL ==========
+    // ========== LER ARQUIVOS SQL DA PASTA UPDATE_SQL ==========
     
-    $install_dir = __DIR__ . '/../../install';
-    $sql_files = glob($install_dir . '/*.sql');
+    $update_sql_dir = __DIR__ . '/../../install/update_sql';
+    $sql_files = [];
     
-    // Ignorar arquivo principal database.sql
-    $sql_files = array_filter($sql_files, function($file) {
-        return basename($file) !== 'database.sql';
-    });
+    // Buscar TODOS os arquivos SQL em update_sql (sem filtros)
+    if (is_dir($update_sql_dir)) {
+        $sql_files = glob($update_sql_dir . '/*.sql');
+    }
+    
+    // Se a pasta update_sql não existir ou estiver vazia, tentar pasta install (fallback)
+    if (empty($sql_files)) {
+        $install_dir = __DIR__ . '/../../install';
+        $sql_files = glob($install_dir . '/*.sql');
+        
+        // Ignorar APENAS database.sql quando buscar na pasta install
+        $sql_files = array_filter($sql_files, function($file) {
+            return basename($file) !== 'database.sql';
+        });
+    }
     
     // ========== BUSCAR TABELAS E COLUNAS EXISTENTES ==========
     
