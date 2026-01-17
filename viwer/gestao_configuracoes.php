@@ -73,7 +73,7 @@ check_permission_admin(); // Apenas admin pode alterar configurações
             <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
                 <form id="configForm" class="config-form">
                     <div class="config-section">
-                        <h3>📋 Informações Gerais</h3>
+                        <h3>📋 Informações Gerais do sistema</h3>
                         
                         <div class="form-group">
                             <label for="system_name">Nome do Sistema *</label>
