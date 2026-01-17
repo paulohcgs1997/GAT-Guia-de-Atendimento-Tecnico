@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Token Criptografado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            border-radius: 5px;
+            display: none;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            font-size: 13px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Gerador de Token Criptografado</h1>
+        <p class="subtitle">Criptografe seu GitHub Token com uma senha secreta</p>
+        
+        <div class="info">
+            <strong>ℹ️ Como usar:</strong><br>
+            1. Cole seu GitHub Personal Access Token<br>
+            2. Escolha uma senha secreta<br>
+            3. Clique em "Criptografar"<br>
+            4. Copie o token criptografado para o código
+        </div>
+        
+        <div class="form-group">
+            <label for="token">GitHub Personal Access Token:</label>
+            <input type="text" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Senha Secreta:</label>
+            <input type="password" id="password" placeholder="Digite uma senha">
+            <small style="color: #666;">Esta senha será necessária para desbloquear o token</small>
+        </div>
+        
+        <button onclick="generateEncrypted()">🔒 Criptografar Token</button>
+        
+        <div id="result" class="result">
+            <strong>✅ Token Criptografado Gerado!</strong>
+            <p>Cole este código no arquivo <code>install/index.php</code> na linha do <code>encryptedToken</code>:</p>
+            <div class="code" id="encryptedOutput"></div>
+            
+            <p style="margin-top: 20px;"><strong>Senha para desbloquear:</strong> <span id="passwordDisplay" style="color: #2196f3;"></span></p>
+            
+            <p style="margin-top: 15px; color: #666; font-size: 13px;">
+                ⚠️ <strong>Importante:</strong> Guarde a senha em local seguro! Será necessária para desbloquear o token durante a instalação.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        function simpleEncrypt(text, password) {
+            // XOR do texto com a senha
+            let encrypted = '';
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i) ^ password.charCodeAt(i % password.length);
+                encrypted += String.fromCharCode(charCode);
+            }
+            
+            // Codifica em Base64
+            return btoa(encrypted);
+        }
+        
+        function simpleDecrypt(encrypted, password) {
+            try {
+                // Decodifica Base64
+                const decoded = atob(encrypted);
+                
+                // XOR reverso
+                let result = '';
+                for (let i = 0; i < decoded.length; i++) {
+                    const charCode = decoded.charCodeAt(i) ^ password.charCodeAt(i % password.length);
+                    result += String.fromCharCode(charCode);
+                }
+                
+                return result;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        function generateEncrypted() {
+            const token = document.getElementById('token').value;
+            const password = document.getElementById('password').value;
+            
+            if (!token) {
+                alert('❌ Digite o token do GitHub!');
+                return;
+            }
+            
+            if (!password) {
+                alert('❌ Digite uma senha!');
+                return;
+            }
+            
+            if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+                alert('⚠️ O token deve começar com "ghp_" ou "github_pat_"');
+                return;
+            }
+            
+            // Criptografa
+            const encrypted = simpleEncrypt(token, password);
+            
+            // Testa a descriptografia
+            const decrypted = simpleDecrypt(encrypted, password);
+            
+            if (decrypted !== token) {
+                alert('❌ Erro ao criptografar! Teste falhou.');
+                return;
+            }
+            
+            // Exibe resultado
+            document.getElementById('encryptedOutput').textContent = `const encryptedToken = '${encrypted}';`;
+            document.getElementById('passwordDisplay').textContent = password;
+            document.getElementById('result').style.display = 'block';
+            
+            console.log('✅ Token criptografado:', encrypted);
+            console.log('🔑 Senha:', password);
+            console.log('✅ Teste de descriptografia:', decrypted === token ? 'SUCESSO' : 'FALHOU');
+        }
+        
+        // Auto-preencher para teste
+        window.addEventListener('load', function() {
+            // Você pode descomentar para testar
+            // document.getElementById('password').value = 'gat2024';
+            // generateEncrypted();
+        });
+    </script>
+</body>
+</html>
