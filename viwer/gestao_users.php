@@ -495,13 +495,9 @@ if ($has_status_column) {
         }
         
         async function deleteUser(id, username) {
-            const confirmText = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\nDeseja realmente EXCLUIR PERMANENTEMENTE o usuário "${username}"?\n\nTodos os dados associados serão perdidos.\n\nDigite "EXCLUIR" para confirmar:`;
-            const userInput = prompt(confirmText);
+            const confirmText = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\nDeseja realmente EXCLUIR PERMANENTEMENTE o usuário "${username}"?\n\nTodos os dados associados serão perdidos.`;
             
-            if (userInput !== 'EXCLUIR') {
-                if (userInput !== null) {
-                    alert('❌ Exclusão cancelada. Você deve digitar exatamente "EXCLUIR" para confirmar.');
-                }
+            if (!confirm(confirmText)) {
                 return;
             }
             
