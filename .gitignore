@@ -1,6 +1,7 @@
 # Arquivos de configuração sensíveis
 src/config/conexao.php
 src/config/config.php
+src/config/github_config.php
 
 # Uploads e mídia
 src/uploads/**

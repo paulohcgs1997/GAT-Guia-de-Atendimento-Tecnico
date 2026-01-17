@@ -315,6 +315,29 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
                         <input type="password" id="admin_pass_confirm" name="admin_pass_confirm" required>
                     </div>
 
+                    <hr style="margin: 30px 0; border: 1px solid #e0e0e0;">
+                    
+                    <h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">
+                        🔐 GitHub Token (Atualizações Automáticas)
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label for="unlock_password">Senha de Desbloqueio</label>
+                        <input type="password" id="unlock_password" name="unlock_password" placeholder="Digite a senha">
+                        <small>Digite a senha para revelar o token do desenvolvedor</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="github_token">GitHub Personal Access Token</label>
+                        <div style="position: relative;">
+                            <input type="password" id="github_token" name="github_token" placeholder="Token será preenchido automaticamente" readonly style="background: #f5f5f5;">
+                            <button type="button" onclick="unlockToken()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 5px 15px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                🔓 Desbloquear
+                            </button>
+                        </div>
+                        <small id="tokenStatus" style="color: #999;">Token criptografado. Use a senha para desbloquear.</small>
+                    </div>
+
                     <button type="submit" class="btn">Instalar Sistema →</button>
                 </form>
             </div>
@@ -513,6 +536,58 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
 
         function showLoading(message) {
             document.getElementById('installStatus').textContent = message;
+        }
+        
+        // Sistema de criptografia do token
+        const encryptedToken = 'Nw8eH2dIYG1ZBV9aAA4pcQdcZFZIaQAGKQkKBWZ7ZHZ6AwVkNTYhDQ=='; // Token criptografado em Base64
+        
+        function simpleDecrypt(encrypted, password) {
+            try {
+                // Decodifica Base64
+                const decoded = atob(encrypted);
+                
+                // XOR reverso com a senha
+                let result = '';
+                for (let i = 0; i < decoded.length; i++) {
+                    const charCode = decoded.charCodeAt(i) ^ password.charCodeAt(i % password.length);
+                    result += String.fromCharCode(charCode);
+                }
+                
+                return result;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        function unlockToken() {
+            const password = document.getElementById('unlock_password').value;
+            const tokenInput = document.getElementById('github_token');
+            const statusText = document.getElementById('tokenStatus');
+            
+            if (!password) {
+                statusText.textContent = '❌ Digite a senha primeiro!';
+                statusText.style.color = '#c33';
+                return;
+            }
+            
+            const decrypted = simpleDecrypt(encryptedToken, password);
+            
+            if (decrypted && decrypted.startsWith('ghp_')) {
+                tokenInput.value = decrypted;
+                tokenInput.type = 'text';
+                tokenInput.style.background = '#e8f5e9';
+                statusText.textContent = '✅ Token desbloqueado com sucesso!';
+                statusText.style.color = '#2e7d32';
+                
+                // Ocultar senha após 2 segundos
+                setTimeout(() => {
+                    tokenInput.type = 'password';
+                }, 2000);
+            } else {
+                statusText.textContent = '❌ Senha incorreta!';
+                statusText.style.color = '#c33';
+                tokenInput.value = '';
+            }
         }
     </script>
 </body>
