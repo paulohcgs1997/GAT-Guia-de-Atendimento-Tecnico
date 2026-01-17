@@ -29,7 +29,7 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Erro na requisição: ' . $e->getMessage()
-    ], JSON_UNESCAPED_UNICODE);
+    ]);
     exit;
 }
 
@@ -159,30 +159,6 @@ if ($action === 'test_db') {
         
         echo json_encode([
             'success' => true,
-            'message' => 'Conexão bem-sucedida!',
-            'db_exists' => $dbExists
-        ], JSON_UNESCAPED_UNICODE);
-        
-    } catch (Exception $e) {
-        error_log("Install: Exception - " . $e->getMessage());
-        
-        echo json_encode([
-            'success' => false,
-            'message' => 'Erro: ' . $e->getMessage()
-        ], JSON_UNESCAPED_UNICODE);
-    } catch (Error $e) {
-        error_log("Install: Fatal Error - " . $e->getMessage());
-        
-        echo json_encode([
-            'success' => false,
-            'message' => 'Erro fatal: ' . $e->getMessage()
-        ], JSON_UNESCAPED_UNICODE);
-    }
-    exit;
-}
-
-// Ação: Instalar sistema
-if ($action === 'install') {
     ob_end_clean();
     
     $db = $input['db'] ?? [];
@@ -209,9 +185,32 @@ if ($action === 'install') {
     try {
         // Desabilitar relatório de erros do mysqli
         mysqli_report(MYSQLI_REPORT_OFF);
-        
+}
+
+// Ação: Instalar sistema
+if ($action === 'install') {
+    $db = $input['db'] ?? [];
+    $admin = $input['admin'] ?? [];
+    
+    $host = $db['db_host'] ?? 'localhost';
+    $dbname = $db['db_name'] ?? 'gat';
+    $user = $db['db_user'] ?? 'root';
+    $pass = $db['db_pass'] ?? '';
+    
+    $adminUser = $admin['admin_user'] ?? 'admin';
+    $adminPass = $admin['admin_pass'] ?? '';
+    
+    if (empty($adminPass)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Senha do administrador não pode ser vazia'
+        ]);
+        exit;
+    }
+    
+    try {
         // Conecta ao MySQL
-        $mysqli = @new mysqli($host, $user, $pass);
+        $mysqli = new mysqli($host, $user, $pass);
         $mysqli->set_charset('utf8mb4');
         
         if ($mysqli->connect_errno) {
@@ -278,7 +277,7 @@ if ($action === 'install') {
         
         try {
             // Reconectar ao banco recém-criado
-            $mysqli = @new mysqli($host, $user, $pass, $dbname);
+            $mysqli = new mysqli($host, $user, $pass, $dbname);
             $mysqli->set_charset('utf8mb4');
             
             if ($mysqli->connect_errno) {
@@ -368,7 +367,7 @@ if ($action === 'install') {
                         
                         error_log("Instalação: Executando query #$idx: " . substr($query, 0, 100) . "...");
                         
-                        if (@$mysqli->query($query)) {
+                        if ($mysqli->query($query)) {
                             $executed++;
                             error_log("Instalação: ✅ Query #$idx executada com sucesso");
                         } else {
@@ -396,24 +395,6 @@ if ($action === 'install') {
                         $updates_log[] = "✅ $filename: $executed comando(s) executado(s)";
                     }
                     
-                    if ($skipped > 0) {
-                        $updates_log[] = "⏭️ $filename: $skipped já existente(s)";
-                    }
-                    
-                    if ($errors > 0) {
-                        $updates_log[] = "⚠️ $filename: $errors erro(s) - verifique os logs";
-                    }
-                    
-                } catch (Exception $e) {
-                    $error_msg = "$filename: " . $e->getMessage();
-                    $updates_errors[] = $error_msg;
-                    error_log("Instalação: EXCEPTION - $error_msg");
-                    error_log("Instalação: Stack trace: " . $e->getTraceAsString());
-                }
-            }
-            
-            $mysqli->close();
-            
             error_log('========== INSTALAÇÃO: ATUALIZAÇÕES FINALIZADAS ==========');
             error_log('Total de logs: ' . count($updates_log));
             error_log('Total de erros: ' . count($updates_errors));
