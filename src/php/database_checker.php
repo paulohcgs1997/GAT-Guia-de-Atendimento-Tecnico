@@ -64,19 +64,34 @@ try {
         $missing_items = [];
         
         // Verificar ALTER TABLE
-        if (preg_match_all('/ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+(?:COLUMN\s+)?`?(\w+)`?/i', $sql_content, $matches)) {
+        if (preg_match_all('/ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+(?:COLUMN\s+)?`?(\w+)`?\s+(.+?)(?:,|;|\n)/si', $sql_content, $matches)) {
             for ($i = 0; $i < count($matches[0]); $i++) {
                 $table = $matches[1][$i];
                 $column = $matches[2][$i];
+                $definition = trim($matches[3][$i]);
                 
                 if (!isset($existing_tables[$table])) {
                     $needs_update = true;
                     $missing_items[] = "Tabela '$table' não existe";
                     $tables_affected[] = $table;
+                    
+                    // Adicionar à lista de missing_columns com formato esperado
+                    $response['missing_columns'][] = [
+                        'table' => $table,
+                        'column' => $column,
+                        'definition' => $definition
+                    ];
                 } elseif (!in_array($column, $existing_tables[$table])) {
                     $needs_update = true;
                     $missing_items[] = "Coluna '$column' em '$table'";
                     $tables_affected[] = $table;
+                    
+                    // Adicionar à lista de missing_columns com formato esperado
+                    $response['missing_columns'][] = [
+                        'table' => $table,
+                        'column' => $column,
+                        'definition' => $definition
+                    ];
                 }
             }
         }
@@ -88,6 +103,7 @@ try {
                     $needs_update = true;
                     $missing_items[] = "Tabela '$table' não existe";
                     $tables_affected[] = $table;
+                    $response['missing_tables'][] = $table;
                 }
             }
         }
@@ -111,15 +127,6 @@ try {
                 'priority' => $priority,
                 'missing_items' => $missing_items
             ];
-            
-            // Adicionar aos missing_columns para compatibilidade
-            foreach ($missing_items as $item) {
-                if (strpos($item, 'Coluna') !== false) {
-                    $response['missing_columns'][] = $item;
-                } elseif (strpos($item, 'Tabela') !== false) {
-                    $response['missing_tables'][] = str_replace(["Tabela '", "' não existe"], '', $item);
-                }
-            }
         }
     }
     
