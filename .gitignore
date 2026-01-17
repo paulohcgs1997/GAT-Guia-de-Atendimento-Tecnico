@@ -63,3 +63,5 @@ package-lock.json
 temp/
 tmp/
 backups/
+
+.branch-info.json

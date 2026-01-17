@@ -56,6 +56,19 @@
             }, 300);
         });
 
+        // Detectar Enter para ir para página de busca
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = this.value.trim();
+                
+                if (query.length >= 2) {
+                    // Redirecionar para página de busca
+                    window.location.href = 'search.php?q=' + encodeURIComponent(query);
+                }
+            }
+        });
+
         // Fechar resultados e limpar pesquisa ao clicar fora
         document.addEventListener('click', function(e) {
             if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {

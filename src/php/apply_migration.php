@@ -23,27 +23,37 @@ try {
         throw new Exception('ID da migração não informado');
     }
     
-    // Buscar arquivo SQL na pasta install baseado no migration_id
-    $install_dir = __DIR__ . '/../../install';
-    $sql_file = $install_dir . '/' . $migration_id . '.sql';
+    // Buscar arquivo SQL na pasta update_sql baseado no migration_id
+    $update_sql_dir = __DIR__ . '/../../install/update_sql';
+    $sql_file = $update_sql_dir . '/' . $migration_id . '.sql';
     
-    // Se não existir com o ID exato, tentar encontrar arquivo que contenha o ID
+    // Se não existir com o ID exato, tentar encontrar arquivo que contenha o ID em update_sql
     if (!file_exists($sql_file)) {
-        $possible_files = glob($install_dir . '/*' . $migration_id . '*.sql');
+        $possible_files = glob($update_sql_dir . '/*' . $migration_id . '*.sql');
         if (count($possible_files) > 0) {
             $sql_file = $possible_files[0];
         }
     }
     
-    // Se ainda não encontrou, tentar procurar por nome de arquivo completo
+    // Se ainda não encontrou na pasta update_sql, tentar pasta install (fallback)
     if (!file_exists($sql_file)) {
-        // Tentar buscar todos os arquivos SQL e verificar qual corresponde
-        $all_sql_files = glob($install_dir . '/*.sql');
-        foreach ($all_sql_files as $file) {
-            $file_id = pathinfo($file, PATHINFO_FILENAME);
-            if ($file_id === $migration_id || strpos($file_id, $migration_id) !== false) {
-                $sql_file = $file;
-                break;
+        $install_dir = __DIR__ . '/../../install';
+        $fallback_file = $install_dir . '/' . $migration_id . '.sql';
+        
+        // Verificar se existe, mas ignorar APENAS database.sql
+        if (file_exists($fallback_file) && basename($fallback_file) !== 'database.sql') {
+            $sql_file = $fallback_file;
+        } else {
+            // Tentar buscar todos os arquivos SQL em install e verificar qual corresponde
+            $all_sql_files = glob($install_dir . '/*.sql');
+            foreach ($all_sql_files as $file) {
+                // Ignorar APENAS database.sql na pasta install
+                if (basename($file) === 'database.sql') continue;
+                $file_id = pathinfo($file, PATHINFO_FILENAME);
+                if ($file_id === $migration_id || strpos($file_id, $migration_id) !== false) {
+                    $sql_file = $file;
+                    break;
+                }
             }
         }
     }

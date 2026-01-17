@@ -186,63 +186,141 @@ check_permission_admin(); // Apenas admin pode alterar configurações
             <!-- Guia: Atualizações do Sistema -->
             <div class="tab-pane fade" id="tab-updates" role="tabpanel">
                 <div class="config-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; border-radius: 8px; padding: 20px;">
+                    
+                    <!-- Cabeçalho com Status -->
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div>
-                            <h3 class="mb-2">
-                                <i class="bi bi-cloud-download"></i> Atualizador de Sistema
-                            </h3>
-                            <p class="text-muted mb-0">
-                                Mantenha seu sistema atualizado com as últimas melhorias do GitHub
+                            <h4 class="mb-1">
+                                <i class="bi bi-cloud-arrow-down" style="color: #10b981;"></i> Central de Atualizações
+                            </h4>
+                            <p class="text-muted small mb-0">
+                                Mantenha seu sistema sempre atualizado
                             </p>
-                            <small class="text-info">
-                                <i class="bi bi-git"></i> <strong>Branch:</strong> main
-                                <span class="mx-2">|</span>
-                                <i class="bi bi-shield-lock"></i> <strong>Token:</strong> Configurado no servidor
-                            </small>
                         </div>
                         <div>
-                            <button type="button" class="btn btn-success" onclick="checkSystemUpdates()" id="btnCheckUpdates">
-                                <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openBranchModal()" title="Configurações Avançadas">
+                                <i class="bi bi-gear"></i>
                             </button>
                         </div>
                     </div>
                     
-                    <hr class="my-3">
+                    <!-- Botão Principal de Atualização -->
+                    <div class="text-center my-3">
+                        <button type="button" class="btn btn-success px-4" onclick="checkSystemUpdates()" id="btnCheckUpdates">
+                            <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
+                        </button>
+                    </div>
                     
+                    <!-- Área de Resultado -->
                     <div id="updateCheckResult">
-                        <div class="alert alert-info d-flex align-items-center" role="alert">
-                            <i class="bi bi-info-circle-fill me-2" style="font-size: 24px;"></i>
-                            <div>
-                                Clique em <strong>"Verificar Atualizações"</strong> para checar se ha novas versões disponíveis no GitHub.
-                            </div>
+                        <div class="alert alert-info d-flex align-items-center py-2 mb-3" role="alert">
+                            <i class="bi bi-info-circle-fill me-2" style="font-size: 20px;"></i>
+                            <small>Clique em <strong>"Verificar Atualizações"</strong> para buscar novas versões.</small>
                         </div>
                     </div>
                     
+                    <!-- Informações de Segurança -->
                     <div class="mt-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="card-title">
-                                    <i class="bi bi-shield-check"></i> Funcionalidades do Atualizador
+                        <div class="card border-0" style="background: rgba(16, 185, 129, 0.1);">
+                            <div class="card-body py-2 px-3">
+                                <h6 class="card-title mb-2 small">
+                                    <i class="bi bi-shield-check text-success"></i> Recursos de Segurança
                                 </h6>
-                                <ul class="list-unstyled mb-0">
-                                    <li class="mb-2">
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <strong>Verificação Automática:</strong> Conecta-se ao GitHub para buscar novas versões
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <strong>Backup Automático:</strong> Cria backup completo antes de qualquer atualização
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <strong>Changelog Integrado:</strong> Visualize todas as mudanças antes de atualizar
-                                    </li>
-                                    <li class="mb-0">
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <strong>Instalação Segura:</strong> Preserva configurações e uploads existentes
-                                    </li>
-                                </ul>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 14px;"></i>
+                                            <div>
+                                                <strong class="small">Backup Automático</strong>
+                                                <div class="text-muted" style="font-size: 11px;">Cria backup antes de atualizar</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 14px;"></i>
+                                            <div>
+                                                <strong class="small">Instalação Segura</strong>
+                                                <div class="text-muted" style="font-size: 11px;">Preserva suas configurações</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 14px;"></i>
+                                            <div>
+                                                <strong class="small">Verificação Automática</strong>
+                                                <div class="text-muted" style="font-size: 11px;">Detecta atualizações disponíveis</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 14px;"></i>
+                                            <div>
+                                                <strong class="small">Changelog Completo</strong>
+                                                <div class="text-muted" style="font-size: 11px;">Veja todas as mudanças</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Configuração de Canal -->
+            <div class="modal fade" id="branchModal" tabindex="-1" aria-labelledby="branchModalLabel" aria-hidden="true" style="z-index: 1060;">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+                    <div class="modal-content" style="z-index: 1061;">
+                        <div class="modal-header bg-primary text-white py-2">
+                            <h6 class="modal-title mb-0" id="branchModalLabel">
+                                <i class="bi bi-gear-fill"></i> Configurações Avançadas
+                            </h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body py-3">
+                            <div class="alert alert-warning d-flex align-items-start py-2" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong class="small">Atenção!</strong>
+                                    <div style="font-size: 11px;" class="mt-1">Alterar o canal pode instalar versões com bugs ou recursos instáveis.</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="github_branch" class="form-label fw-bold small mb-1">
+                                    <i class="bi bi-bezier2"></i> Canal de Atualizações
+                                </label>
+                                <select class="form-select" id="github_branch" name="github_branch">
+                                    <option value="">Carregando canais...</option>
+                                </select>
+                            </div>
+
+                            <!-- Informações Dinâmicas do Branch Selecionado -->
+                            <div id="branchInfoCard" style="display: none;">
+                                <div class="card bg-light border-0 mb-2 mt-2">
+                                    <div class="card-body py-2 px-3">
+                                        <h6 class="card-title mb-2 small">
+                                            <i class="bi bi-info-circle"></i> Informações do Canal
+                                        </h6>
+                                        <div id="branchDetailsContent" style="font-size: 13px;">
+                                            <!-- Preenchido dinamicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="branchConfigStatus"></div>
+                        </div>
+                        <div class="modal-footer py-2">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="saveBranchConfigFromModal()">
+                                <i class="bi bi-check-circle"></i> Salvar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -323,6 +401,9 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 updatesTab.addEventListener('shown.bs.tab', function() {
                     console.log('📑 Aba de Atualizações ativada');
                     
+                    // Carregar branches disponíveis
+                    loadGithubBranches();
+                    
                     setTimeout(() => {
                         if (typeof checkSystemUpdates === 'function') {
                             console.log('🚀 Verificando atualizações automaticamente...');
@@ -341,6 +422,343 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 }, 100);
             }
         });
+
+        // Função para carregar branches disponíveis do GitHub
+        async function loadGithubBranches() {
+            const select = document.getElementById('github_branch');
+            const badge = document.getElementById('currentBranchBadge');
+            const statusDiv = document.getElementById('branchConfigStatus');
+            
+            console.log('🔍 Carregando branches do GitHub...');
+            if (select) select.innerHTML = '<option value="">Carregando...</option>';
+            if (badge) badge.textContent = 'Carregando...';
+            
+            try {
+                const url = '../src/php/get_github_config.php?action=get_branches';
+                console.log('📡 Fazendo requisição para:', url);
+                
+                const response = await fetch(url);
+                console.log('📥 Resposta recebida:', response.status, response.statusText);
+                
+                const data = await response.json();
+                console.log('📦 Dados recebidos:', data);
+                
+                if (data.success && data.branches) {
+                    console.log('✅ Branches encontrados:', data.branches.length);
+                    if (select) select.innerHTML = '';
+                    
+                    // Armazenar informações dos branches globalmente
+                    window.branchesInfo = data.branches;
+                    
+                    data.branches.forEach(branch => {
+                        console.log('➕ Adicionando branch:', branch.name);
+                        const option = document.createElement('option');
+                        option.value = branch.name;
+                        option.textContent = branch.name;
+                        
+                        // Adicionar informações como data-attributes
+                        if (branch.commit) {
+                            option.setAttribute('data-commit-message', branch.commit.message || '');
+                            option.setAttribute('data-commit-date', branch.commit.date || '');
+                            option.setAttribute('data-commit-author', branch.commit.author || '');
+                            option.setAttribute('data-commit-sha', branch.commit.sha || '');
+                        }
+                        
+                        // Marcar o branch atual como selecionado
+                        if (branch.name === data.current_branch) {
+                            option.selected = true;
+                            console.log('⭐ Branch atual marcado:', branch.name);
+                        }
+                        
+                        if (select) select.appendChild(option);
+                    });
+                    
+                    // Adicionar evento onChange para mostrar informações do branch
+                    if (select) {
+                        select.addEventListener('change', function() {
+                            updateBranchInfo(this.value);
+                        });
+                        
+                        // Mostrar informações do branch atual
+                        if (data.current_branch) {
+                            updateBranchInfo(data.current_branch);
+                        }
+                    }
+                    
+                    // Atualizar badge com o canal atual
+                    if (badge && data.current_branch) {
+                        const branchName = data.current_branch.toUpperCase();
+                        badge.textContent = branchName === 'MAIN' ? '🟢 Estável (main)' : '🔶 Desenvolvimento (' + data.current_branch + ')';
+                        badge.className = branchName === 'MAIN' ? 'badge bg-success' : 'badge bg-warning';
+                    }
+                    
+                    console.log('✅ Branches carregados com sucesso!');
+                } else {
+                    console.warn('⚠️ Falha ao carregar branches:', data.message || 'Sem mensagem');
+                    if (select) select.innerHTML = '<option value="main">main</option>';
+                    if (badge) {
+                        badge.textContent = '🟢 Estável (main)';
+                        badge.className = 'badge bg-success';
+                    }
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `
+                            <div class="alert alert-warning alert-sm mb-0">
+                                <i class="bi bi-exclamation-triangle"></i> ${data.message || 'Não foi possível carregar os canais.'}
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar branches:', error);
+                if (select) select.innerHTML = '<option value="main">main</option>';
+                if (badge) {
+                    badge.textContent = '🟢 Estável (main)';
+                    badge.className = 'badge bg-success';
+                }
+                if (statusDiv) {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger alert-sm mb-0">
+                            <i class="bi bi-x-circle"></i> Erro ao conectar: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Função para atualizar informações do branch selecionado
+        function updateBranchInfo(branchName) {
+            const infoCard = document.getElementById('branchInfoCard');
+            const detailsContent = document.getElementById('branchDetailsContent');
+            
+            if (!infoCard || !detailsContent) return;
+            
+            // Buscar informações do branch
+            const branchInfo = window.branchesInfo?.find(b => b.name === branchName);
+            
+            if (branchInfo && branchInfo.commit) {
+                const commit = branchInfo.commit;
+                const metadata = branchInfo.metadata;
+                
+                const commitDate = commit.date ? new Date(commit.date) : null;
+                const formattedDate = commitDate ? commitDate.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Data não disponível';
+                
+                // Se tiver metadata personalizado, usar ele
+                if (metadata) {
+                    const badgeClass = metadata.color === 'success' ? 'bg-success' : 
+                                      metadata.color === 'warning' ? 'bg-warning' : 
+                                      metadata.color === 'danger' ? 'bg-danger' : 'bg-primary';
+                    
+                    const badgeIcon = metadata.recommended ? '<i class="bi bi-star-fill"></i>' : 
+                                     metadata.stability === 'experimental' ? '<i class="bi bi-exclamation-triangle"></i>' : 
+                                     '<i class="bi bi-info-circle"></i>';
+                    
+                    const recommendedBadge = metadata.recommended 
+                        ? `<span class="badge ${badgeClass}">${badgeIcon} ${metadata.type || 'Recomendado'}</span>`
+                        : `<span class="badge ${badgeClass}">${badgeIcon} ${metadata.stability || metadata.type}</span>`;
+                    
+                    let html = `
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <strong style="font-size: 1.1em;">${metadata.name || branchName}</strong>
+                                ${recommendedBadge}
+                            </div>
+                            <p class="text-muted small mb-3">${metadata.description || 'Sem descrição disponível'}</p>
+                        </div>
+                    `;
+                    
+                    // Recursos
+                    if (metadata.features && metadata.features.length > 0) {
+                        html += `
+                            <div class="border-top pt-3 mb-3">
+                                <h6 class="text-muted small mb-2"><i class="bi bi-stars"></i> RECURSOS DESTE CANAL</h6>
+                                <ul class="mb-0 small">
+                        `;
+                        metadata.features.forEach(feature => {
+                            html += `<li><i class="bi bi-check-circle text-success"></i> ${feature}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    
+                    // Avisos
+                    if (metadata.warnings && metadata.warnings.length > 0) {
+                        html += `
+                            <div class="border-top pt-3 mb-3">
+                                <h6 class="text-muted small mb-2"><i class="bi bi-exclamation-triangle-fill text-warning"></i> AVISOS</h6>
+                                <ul class="mb-0 small text-warning">
+                        `;
+                        metadata.warnings.forEach(warning => {
+                            html += `<li><i class="bi bi-exclamation-circle"></i> ${warning}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    
+                    // Informações do commit
+                    html += `
+                        <div class="border-top pt-3">
+                            <h6 class="text-muted small mb-2">ÚLTIMA ATUALIZAÇÃO</h6>
+                            <div class="mb-2">
+                                <i class="bi bi-calendar-event text-primary"></i>
+                                <strong>${formattedDate}</strong>
+                            </div>
+                            <div class="mb-2">
+                                <i class="bi bi-person text-primary"></i>
+                                ${commit.author}
+                            </div>
+                            <div class="mb-2">
+                                <i class="bi bi-git text-primary"></i>
+                                <code>${commit.sha}</code>
+                            </div>
+                        </div>
+                        
+                        <div class="border-top pt-3 mt-3">
+                            <h6 class="text-muted small mb-2">ÚLTIMO COMMIT</h6>
+                            <div class="small" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 3px solid #0d6efd;">
+                                <i class="bi bi-chat-left-text"></i> ${commit.message.split('\n')[0]}
+                            </div>
+                        </div>
+                    `;
+                    
+                    detailsContent.innerHTML = html;
+                } else {
+                    // Fallback para branches sem metadata
+                    const isMain = branchName.toLowerCase() === 'main';
+                    const recommendation = isMain 
+                        ? '<span class="badge bg-success"><i class="bi bi-star-fill"></i> Recomendado</span>'
+                        : '<span class="badge bg-warning"><i class="bi bi-exclamation-triangle"></i> Experimental</span>';
+                    
+                    const description = isMain
+                        ? 'Canal estável com versões testadas e aprovadas para produção.'
+                        : 'Canal de desenvolvimento com recursos experimentais e novas funcionalidades em teste.';
+                    
+                    detailsContent.innerHTML = `
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <strong style="font-size: 1.1em;">${branchName}</strong>
+                                ${recommendation}
+                            </div>
+                            <p class="text-muted small mb-3">${description}</p>
+                        </div>
+                        
+                        <div class="border-top pt-3">
+                            <h6 class="text-muted small mb-2">ÚLTIMA ATUALIZAÇÃO</h6>
+                            <div class="mb-2">
+                                <i class="bi bi-calendar-event text-primary"></i>
+                                <strong>${formattedDate}</strong>
+                            </div>
+                            <div class="mb-2">
+                                <i class="bi bi-person text-primary"></i>
+                                ${commit.author}
+                            </div>
+                            <div class="mb-2">
+                                <i class="bi bi-git text-primary"></i>
+                                <code>${commit.sha}</code>
+                            </div>
+                        </div>
+                        
+                        <div class="border-top pt-3 mt-3">
+                            <h6 class="text-muted small mb-2">ÚLTIMO COMMIT</h6>
+                            <div class="small" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 3px solid #0d6efd;">
+                                <i class="bi bi-chat-left-text"></i> ${commit.message.split('\n')[0]}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                infoCard.style.display = 'block';
+            } else {
+                infoCard.style.display = 'none';
+            }
+        }
+
+        // Função para abrir o modal de configuração
+        function openBranchModal() {
+            const modal = new bootstrap.Modal(document.getElementById('branchModal'));
+            modal.show();
+            // Recarregar branches ao abrir o modal
+            loadGithubBranches();
+        }
+
+        // Função para salvar a configuração do branch a partir do modal
+        async function saveBranchConfigFromModal() {
+            const select = document.getElementById('github_branch');
+            const statusDiv = document.getElementById('branchConfigStatus');
+            const badge = document.getElementById('currentBranchBadge');
+            const selectedBranch = select.value;
+            
+            if (!selectedBranch) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-warning alert-sm mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Selecione um canal primeiro.
+                    </div>
+                `;
+                return;
+            }
+            
+            statusDiv.innerHTML = `
+                <div class="alert alert-info alert-sm mb-0">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    Salvando configuração...
+                </div>
+            `;
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'save_branch');
+                formData.append('branch', selectedBranch);
+                
+                const response = await fetch('../src/php/save_github_config.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success alert-sm mb-0">
+                            <i class="bi bi-check-circle"></i> ${data.message || 'Canal salvo com sucesso!'}
+                        </div>
+                    `;
+                    
+                    // Atualizar badge
+                    const branchName = selectedBranch.toUpperCase();
+                    if (badge) {
+                        badge.textContent = branchName === 'MAIN' ? '🟢 Estável (main)' : '🔶 Desenvolvimento (' + selectedBranch + ')';
+                        badge.className = branchName === 'MAIN' ? 'badge bg-success' : 'badge bg-warning';
+                    }
+                    
+                    // Fechar modal após 1.5 segundos
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('branchModal'));
+                        if (modal) modal.hide();
+                    }, 1500);
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger alert-sm mb-0">
+                            <i class="bi bi-x-circle"></i> ${data.message || 'Erro ao salvar canal.'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao salvar branch:', error);
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger alert-sm mb-0">
+                        <i class="bi bi-x-circle"></i> Erro ao salvar configuração.
+                    </div>
+                `;
+            }
+        }
+
+        // Função mantida para compatibilidade (agora chama a função do modal)
+        async function saveBranchConfig() {
+            await saveBranchConfigFromModal();
+        }
     </script>
     
     <!-- Bootstrap cuida da navegação das tabs automaticamente -->

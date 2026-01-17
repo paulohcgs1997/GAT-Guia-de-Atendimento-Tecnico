@@ -51,7 +51,19 @@ if (!defined('GITHUB_TOKEN') || !defined('GITHUB_OWNER') || !defined('GITHUB_REP
 $github_token = GITHUB_TOKEN;
 $github_owner = GITHUB_OWNER;
 $github_repo = GITHUB_REPO;
-$github_branch = GITHUB_BRANCH;
+
+// Buscar branch configurado do banco de dados
+$github_branch = GITHUB_BRANCH; // Padrão se não encontrar no DB
+
+require_once __DIR__ . '/../config/conexao.php';
+if (isset($mysqli)) {
+    $sql = "SELECT config_value FROM system_config WHERE config_key = 'github_branch'";
+    $result = $mysqli->query($sql);
+    if ($result && $row = $result->fetch_assoc()) {
+        $github_branch = $row['config_value'];
+    }
+}
+
 $github_api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}";
 
 // Ler hash do último commit local (se existir .git)
