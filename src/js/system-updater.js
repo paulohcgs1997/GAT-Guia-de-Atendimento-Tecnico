@@ -67,9 +67,13 @@ async function checkSystemUpdates() {
                     <div class="flex-grow-1">
                         <strong>Nova versão disponível!</strong>
                         <div class="mt-2">
-                            <span class="badge bg-secondary">Atual: v${data.current_version}</span>
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-laptop"></i> Local: ${data.current_build || data.current_version}
+                            </span>
                             <i class="bi bi-arrow-right mx-2"></i>
-                            <span class="badge bg-success">Nova: v${data.latest_version}</span>
+                            <span class="badge bg-success">
+                                <i class="bi bi-cloud"></i> Remoto: ${data.remote_build || data.latest_version}
+                            </span>
                             <span class="badge bg-info ms-2">
                                 <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
                             </span>
@@ -148,13 +152,21 @@ ${data.release_info.body || 'Sem descrição disponível'}
                                 <i class="bi bi-git"></i> Branch: ${data.branch || 'main'}
                             </span>
                         </div>
-                        <p class="mb-0">Você está usando a versão mais recente: <strong>v${data.current_version}</strong></p>
-                        <small class="text-muted">Build: ${data.current_build} | Repositório: ${data.repository || 'N/A'}</small>
+                        <p class="mb-0">Você está usando a versão mais recente.</p>
+                        <div class="mt-2">
+                            <span class="badge bg-info">
+                                <i class="bi bi-laptop"></i> Local: ${data.current_build || data.current_version}
+                            </span>
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-cloud"></i> Remoto: ${data.remote_build || data.latest_version}
+                            </span>
+                        </div>
+                        <small class="text-muted d-block mt-2">Repositório: ${data.repository || 'N/A'}</small>
                         
                         <!-- Botão para forçar reinstalação (útil para testes ou correções) -->
                         <div class="mt-3">
                             <button class="btn btn-sm btn-outline-warning" onclick="applySystemUpdate('${data.download_url}', '${data.current_version}', true)">
-                                <i class="bi bi-arrow-clockwise"></i> Forçar Reinstalação (Teste)
+                                <i class="bi bi-arrow-clockwise"></i> Forçar Reinstalação
                             </button>
                             <small class="text-muted d-block mt-2">
                                 <i class="bi bi-info-circle"></i> Útil para restaurar arquivos ou testar o sistema de atualização

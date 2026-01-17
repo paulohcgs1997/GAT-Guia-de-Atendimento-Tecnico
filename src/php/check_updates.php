@@ -68,7 +68,13 @@ if ($local_commit_hash === 'desconhecido' && file_exists($last_update_file)) {
     $last_update_info = json_decode(file_get_contents($last_update_file), true);
     if ($last_update_info && isset($last_update_info['commit_hash'])) {
         $local_commit_hash = $last_update_info['commit_hash'];
-        error_log('Hash do último update encontrado: ' . $local_commit_hash);
+        error_log('Hash do último update encontrado no .last_update: ' . $local_commit_hash);
+    }
+} else {
+    if (file_exists($git_head_file)) {
+        error_log('Hash encontrado no .git: ' . $local_commit_hash);
+    } else {
+        error_log('Nenhum hash local encontrado - nem .git nem .last_update');
     }
 }
 
@@ -118,9 +124,16 @@ try {
     
     // Comparar commits: se o hash local é diferente do remoto, há atualização
     $local_hash_short = ($local_commit_hash !== 'desconhecido') ? substr($local_commit_hash, 0, 7) : 'desconhecido';
-    $has_update = ($local_hash_short !== 'desconhecido' && $local_hash_short !== $remote_commit_hash);
     
-    error_log('Comparação: Local=' . $local_hash_short . ' vs Remoto=' . $remote_commit_hash . ' | Tem update: ' . ($has_update ? 'SIM' : 'NÃO'));
+    // Se o hash local é desconhecido, considerar que há atualização disponível
+    // Se os hashes são diferentes, há atualização
+    if ($local_hash_short === 'desconhecido') {
+        $has_update = true;
+        error_log('Hash local desconhecido - considerando atualização disponível');
+    } else {
+        $has_update = ($local_hash_short !== $remote_commit_hash);
+        error_log('Comparação: Local=' . $local_hash_short . ' vs Remoto=' . $remote_commit_hash . ' | Tem update: ' . ($has_update ? 'SIM' : 'NÃO'));
+    }
     
     // URL de download direto do branch
     $branch_download_url = "https://github.com/{$github_owner}/{$github_repo}/archive/refs/heads/{$github_branch}.zip";
