@@ -226,31 +226,108 @@ try {
     
     error_log('Diretório validado e acessível');
     
+    // ⚠️ VALIDAÇÃO CRÍTICA: GARANTIR QUE O DIRETÓRIO TEM ARQUIVOS DO SISTEMA
+    error_log('Validando conteúdo do diretório extraído...');
+    
+    $critical_files = ['index.php', 'src', 'viwer', 'install'];
+    $found_critical = 0;
+    
+    foreach ($critical_files as $critical_file) {
+        $check_path = $update_files_dir . DIRECTORY_SEPARATOR . $critical_file;
+        if (file_exists($check_path)) {
+            $found_critical++;
+            error_log("✓ Arquivo crítico encontrado: $critical_file");
+        } else {
+            error_log("✗ Arquivo crítico NÃO encontrado: $critical_file");
+        }
+    }
+    
+    // Se não encontrou pelo menos 3 arquivos críticos, algo está errado
+    if ($found_critical < 3) {
+        error_log("ERRO CRÍTICO: Apenas $found_critical de 4 arquivos críticos encontrados!");
+        error_log('Listando conteúdo do diretório:');
+        $dir_contents = scandir($update_files_dir);
+        error_log(print_r($dir_contents, true));
+        
+        throw new Exception(
+            "Validação falhou: O diretório extraído não parece conter os arquivos do sistema. " .
+            "Apenas $found_critical de 4 arquivos críticos foram encontrados. " .
+            "A atualização foi cancelada para evitar perda de dados."
+        );
+    }
+    
+    error_log("✓ Validação passou: $found_critical arquivos críticos encontrados");
+    
     // PASSO 4: REMOVER ARQUIVOS ANTIGOS (EXCETO PROTEGIDOS)
     error_log('Removendo arquivos antigos...');
     
-    // Lista de diretórios e arquivos que NUNCA devem ser removidos
+    // Lista EXPANDIDA de diretórios e arquivos que NUNCA devem ser removidos
     $protected_paths = [
+        // Configurações críticas
         'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'conexao.php',
         'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'github_config.php',
+        
+        // Uploads (TODAS as variações)
         'uploads',
+        'uploads' . DIRECTORY_SEPARATOR,
         'src' . DIRECTORY_SEPARATOR . 'uploads',
+        'src' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR,
+        
+        // Backups
         'backups',
+        'backups' . DIRECTORY_SEPARATOR,
+        
+        // Arquivos temporários
         'temp_restore_',
+        'temp_update',
+        
+        // Git
         '.git',
+        '.gitignore',
+        
+        // Versionamento
         '.last_update',
-        'version.json'
+        'version.json',
+        
+        // Instalação
+        'install' . DIRECTORY_SEPARATOR . '.installed',
+        
+        // Logs
+        'error_log',
+        'php_errors.log'
     ];
     
     // Função para verificar se um caminho está protegido
     function isProtectedPath($path, $protected_paths) {
+        // Normalizar barras
+        $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        
         foreach ($protected_paths as $protected) {
+            $protected = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $protected);
+            
+            // Verificar se começa com o caminho protegido
             if (strpos($path, $protected) === 0) {
+                return true;
+            }
+            
+            // Verificar se contém o caminho protegido
+            if (strpos($path, DIRECTORY_SEPARATOR . $protected) !== false) {
                 return true;
             }
         }
         return false;
     }
+    
+    // 🛡️ PROTEÇÃO ADICIONAL: Contar quantos arquivos serão deletados
+    error_log('Analisando arquivos para remoção...');
+    
+    $files_count = 0;
+    $protected_count = 0;
+    // 🛡️ PROTEÇÃO ADICIONAL: Contar quantos arquivos serão deletados
+    error_log('Analisando arquivos para remoção...');
+    
+    $files_count = 0;
+    $protected_count = 0;
     
     // Coletar todos os arquivos atuais (exceto protegidos)
     $current_files = new RecursiveIteratorIterator(
@@ -263,19 +340,60 @@ try {
         $filePath = $file->getRealPath();
         $relativePath = substr($filePath, strlen($root_dir) + 1);
         
+        $files_count++;
+        
         // Verificar se o caminho está protegido
-        if (!isProtectedPath($relativePath, $protected_paths)) {
+        if (isProtectedPath($relativePath, $protected_paths)) {
+            $protected_count++;
+            error_log("🛡️ PROTEGIDO: $relativePath");
+        } else {
             $files_to_delete[] = $filePath;
         }
     }
     
+    error_log("📊 Total de arquivos: $files_count");
+    error_log("🛡️ Arquivos protegidos: $protected_count");
+    error_log("🗑️ Arquivos a deletar: " . count($files_to_delete));
+    
+    // 🚨 VALIDAÇÃO CRÍTICA: Se vai deletar mais de 90% dos arquivos, algo está errado!
+    $delete_percentage = ($files_count > 0) ? (count($files_to_delete) / $files_count) * 100 : 0;
+    
+    if ($delete_percentage > 95) {
+        error_log("⚠️ ALERTA CRÍTICO: Tentando deletar {$delete_percentage}% dos arquivos!");
+        throw new Exception(
+            "Operação cancelada por segurança: O sistema tentaria deletar {$delete_percentage}% dos arquivos. " .
+            "Isso pode indicar um problema com a atualização. Total: $files_count, A deletar: " . count($files_to_delete)
+        );
+    }
+    
     // Deletar arquivos coletados
+    $deleted_count = 0;
+    $failed_count = 0;
+    
     foreach ($files_to_delete as $file_path) {
-        if (is_file($file_path)) {
-            unlink($file_path);
-        } elseif (is_dir($file_path)) {
-            @rmdir($file_path); // Só remove se estiver vazio
+        try {
+            if (is_file($file_path)) {
+                if (@unlink($file_path)) {
+                    $deleted_count++;
+                } else {
+                    $failed_count++;
+                    error_log("Falha ao deletar arquivo: $file_path");
+                }
+            } elseif (is_dir($file_path)) {
+                if (@rmdir($file_path)) {
+                    $deleted_count++;
+                }
+                // Se falhar, não é erro crítico (diretório pode não estar vazio)
+            }
+        } catch (Exception $e) {
+            $failed_count++;
+            error_log("Erro ao deletar: $file_path - " . $e->getMessage());
         }
+    }
+    
+    error_log("✅ Arquivos deletados: $deleted_count");
+    if ($failed_count > 0) {
+        error_log("⚠️ Falhas ao deletar: $failed_count");
     }
     
     error_log('Arquivos antigos removidos (exceto configurações e uploads)');
@@ -572,11 +690,38 @@ try {
 } catch (Exception $e) {
     ob_clean();
     
-    error_log('ERRO na atualização: ' . $e->getMessage());
+    error_log('❌ ERRO CRÍTICO na atualização: ' . $e->getMessage());
     error_log('Trace: ' . $e->getTraceAsString());
     
-    echo json_encode([
+    // Tentar informar qual backup pode ser usado para restaurar
+    $latest_backup = null;
+    if (isset($backup_name) && !empty($backup_name)) {
+        $latest_backup = $backup_name;
+        error_log('💾 Backup criado antes do erro: ' . $backup_name);
+    } else {
+        // Buscar o backup mais recente
+        if (isset($backup_dir) && is_dir($backup_dir)) {
+            $backup_files = glob($backup_dir . DIRECTORY_SEPARATOR . 'backup_*.zip');
+            if (!empty($backup_files)) {
+                usort($backup_files, function($a, $b) {
+                    return filemtime($b) - filemtime($a);
+                });
+                $latest_backup = basename($backup_files[0]);
+                error_log('💾 Último backup disponível: ' . $latest_backup);
+            }
+        }
+    }
+    
+    $error_response = [
         'success' => false,
-        'error' => $e->getMessage()
-    ]);
+        'error' => $e->getMessage(),
+        'restore_available' => !is_null($latest_backup)
+    ];
+    
+    if ($latest_backup) {
+        $error_response['backup_file'] = $latest_backup;
+        $error_response['restore_message'] = 'Um backup está disponível. Acesse a aba "Backups" nas configurações para restaurar o sistema.';
+    }
+    
+    echo json_encode($error_response);
 }

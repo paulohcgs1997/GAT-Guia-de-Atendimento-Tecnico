@@ -312,22 +312,41 @@ async function applySystemUpdate(downloadUrl, version, forceReinstall = false) {
             `;
         } else {
             const error = new Error(data.error);
-            error.debug = data.debug;
+            error.data = data;
             throw error;
         }
         
     } catch (error) {
-        resultDiv.innerHTML = `
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
+        console.error('❌ Erro na atualização:', error);
+        
+        let errorHtml = `
+            <div class="alert alert-danger d-flex align-items-start" role="alert">
                 <i class="bi bi-x-circle-fill me-2" style="font-size: 24px;"></i>
-                <div>
+                <div style="flex: 1;">
                     <strong>Erro ao aplicar atualização</strong>
-                    <p class="mb-0 mt-1">${error.message}</p>
-                    ${error.debug ? '<pre class="mt-2 mb-0 small">' + JSON.stringify(error.debug, null, 2) + '</pre>' : ''}
-                    <small class="text-muted">O sistema permanece na versão anterior.</small>
+                    <p class="mb-0 mt-2">${error.message}</p>
+        `;
+        
+        // Se tem backup disponível, mostrar opção de restaurar
+        if (error.data && error.data.restore_available && error.data.backup_file) {
+            errorHtml += `
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <strong><i class="bi bi-shield-check"></i> Backup disponível</strong>
+                        <p class="mb-2 mt-2">${error.data.restore_message || 'Um backup está disponível para restauração.'}</p>
+                        <button class="btn btn-sm btn-warning" onclick="window.location.href='gestao_configuracoes.php#tab-backups'">
+                            <i class="bi bi-arrow-counterclockwise"></i> Ir para Backups
+                        </button>
+                    </div>
+            `;
+        }
+        
+        errorHtml += `
+                    <p class="text-muted mt-2 mb-0"><small>O sistema permanece na versão anterior.</small></p>
                 </div>
             </div>
         `;
+        
+        resultDiv.innerHTML = errorHtml;
     }
 }
 
