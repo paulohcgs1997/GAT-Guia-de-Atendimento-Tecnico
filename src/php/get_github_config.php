@@ -39,64 +39,39 @@ function getBranches() {
     global $mysqli;
     
     try {
-        // Buscar configuração do repositório
-        $root_dir = realpath(__DIR__ . '/../..');
-        $git_config = $root_dir . '/.git/config';
+        // Buscar configuração APENAS do arquivo github_config.php
+        $config_file = __DIR__ . '/../config/github_config.php';
         
-        $owner = null;
-        $repo = null;
-        
-        // Detectar do .git/config
-        if (file_exists($git_config)) {
-            $config_content = file_get_contents($git_config);
-            if (preg_match('/github\.com[\/:]([^\/]+)\/([^\s\.]+)/i', $config_content, $matches)) {
-                $owner = $matches[1];
-                $repo = str_replace('.git', '', $matches[2]);
-            }
-        }
-        
-        // Se não detectou, buscar do banco
-        if (!$owner || !$repo) {
-            $sql = "SELECT config_value FROM system_config WHERE config_key = 'github_repository'";
-            $result = $mysqli->query($sql);
-            
-            if ($result && $row = $result->fetch_assoc()) {
-                $repo_data = json_decode($row['config_value'], true);
-                if ($repo_data) {
-                    $owner = $repo_data['owner'] ?? null;
-                    $repo = $repo_data['repo'] ?? null;
-                }
-            }
-        }
-        
-        if (!$owner || !$repo) {
+        if (!file_exists($config_file)) {
             ob_end_clean();
             echo json_encode([
                 'success' => false,
-                'message' => 'Repositório não configurado',
-                'debug' => ['owner' => $owner, 'repo' => $repo]
+                'message' => 'Arquivo de configuração do GitHub não encontrado',
+                'debug' => ['config_file' => $config_file]
             ]);
             exit;
         }
         
-        // Buscar token do github_config.php se existir
-        $token = null;
-        $config_file = __DIR__ . '/../config/github_config.php';
-        if (file_exists($config_file)) {
-            require_once $config_file;
-            if (defined('GITHUB_TOKEN')) {
-                $token = GITHUB_TOKEN;
-            }
+        require_once $config_file;
+        
+        // Verificar se as constantes estão definidas
+        if (!defined('GITHUB_TOKEN') || !defined('GITHUB_OWNER') || !defined('GITHUB_REPO')) {
+            ob_end_clean();
+            echo json_encode([
+                'success' => false,
+                'message' => 'Configuração do GitHub incompleta',
+                'debug' => [
+                    'has_token' => defined('GITHUB_TOKEN'),
+                    'has_owner' => defined('GITHUB_OWNER'),
+                    'has_repo' => defined('GITHUB_REPO')
+                ]
+            ]);
+            exit;
         }
         
-        // Se não encontrou no arquivo, buscar do banco
-        if (!$token) {
-            $sql = "SELECT config_value FROM system_config WHERE config_key = 'github_token'";
-            $result = $mysqli->query($sql);
-            if ($result && $row = $result->fetch_assoc()) {
-                $token = $row['config_value'];
-            }
-        }
+        $token = GITHUB_TOKEN;
+        $owner = GITHUB_OWNER;
+        $repo = GITHUB_REPO;
         
         // Buscar branch atual salvo
         $current_branch = 'main';
@@ -250,57 +225,42 @@ function getBranches() {
 }
 
 try {
-    // Tentar detectar do .git/config primeiro
-    $root_dir = realpath(__DIR__ . '/../..');
-    $git_config = $root_dir . '/.git/config';
+    // Buscar configuração APENAS do arquivo github_config.php
+    $config_file = __DIR__ . '/../config/github_config.php';
     
-    $config = null;
-    
-    if (file_exists($git_config)) {
-        $config_content = file_get_contents($git_config);
-        
-        // Detectar URL do GitHub
-        if (preg_match('/github\.com[\/:]([^\/]+)\/([^\s\.]+)/i', $config_content, $matches)) {
-            $config = [
-                'owner' => $matches[1],
-                'repo' => str_replace('.git', '', $matches[2]),
-                'source' => 'git'
-            ];
-        }
-    }
-    
-    // Se não detectou, buscar do banco
-    if (!$config) {
-        $sql = "SELECT config_value FROM system_config WHERE config_key = 'github_repository'";
-        $result = $mysqli->query($sql);
-        
-        if ($result && $row = $result->fetch_assoc()) {
-            $repo_data = json_decode($row['config_value'], true);
-            if ($repo_data && isset($repo_data['owner']) && isset($repo_data['repo'])) {
-                $config = [
-                    'owner' => $repo_data['owner'],
-                    'repo' => $repo_data['repo'],
-                    'source' => 'database'
-                ];
-            }
-        }
-    }
-    
-    if ($config) {
-        ob_end_clean();
-        echo json_encode([
-            'success' => true,
-            'config' => $config
-        ]);
-        exit;
-    } else {
+    if (!file_exists($config_file)) {
         ob_end_clean();
         echo json_encode([
             'success' => false,
-            'message' => 'Repositório não configurado'
+            'message' => 'Arquivo de configuração do GitHub não encontrado'
         ]);
         exit;
     }
+    
+    require_once $config_file;
+    
+    // Verificar se as constantes estão definidas
+    if (!defined('GITHUB_OWNER') || !defined('GITHUB_REPO')) {
+        ob_end_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Configuração do GitHub incompleta no arquivo'
+        ]);
+        exit;
+    }
+    
+    $config = [
+        'owner' => GITHUB_OWNER,
+        'repo' => GITHUB_REPO,
+        'source' => 'config_file'
+    ];
+    
+    ob_end_clean();
+    echo json_encode([
+        'success' => true,
+        'config' => $config
+    ]);
+    exit;
     
 } catch (Exception $e) {
     ob_end_clean();
