@@ -62,6 +62,16 @@ if (file_exists($git_head_file)) {
     $local_commit_hash = trim(file_get_contents($git_head_file));
 }
 
+// Se não tiver .git, verificar se existe arquivo .last_update (última atualização aplicada)
+$last_update_file = __DIR__ . '/../../.last_update';
+if ($local_commit_hash === 'desconhecido' && file_exists($last_update_file)) {
+    $last_update_info = json_decode(file_get_contents($last_update_file), true);
+    if ($last_update_info && isset($last_update_info['commit_hash'])) {
+        $local_commit_hash = $last_update_info['commit_hash'];
+        error_log('Hash do último update encontrado: ' . $local_commit_hash);
+    }
+}
+
 // Usar timestamp de build como versão se não tiver commit hash
 $current_version = [
     'version' => '1.0.0', 
@@ -107,8 +117,10 @@ try {
     $remote_commit_hash = substr($latest_commit['sha'], 0, 7);
     
     // Comparar commits: se o hash local é diferente do remoto, há atualização
-    $has_update = ($local_commit_hash !== 'desconhecido' && 
-                   substr($local_commit_hash, 0, 7) !== $remote_commit_hash);
+    $local_hash_short = ($local_commit_hash !== 'desconhecido') ? substr($local_commit_hash, 0, 7) : 'desconhecido';
+    $has_update = ($local_hash_short !== 'desconhecido' && $local_hash_short !== $remote_commit_hash);
+    
+    error_log('Comparação: Local=' . $local_hash_short . ' vs Remoto=' . $remote_commit_hash . ' | Tem update: ' . ($has_update ? 'SIM' : 'NÃO'));
     
     // URL de download direto do branch
     $branch_download_url = "https://github.com/{$github_owner}/{$github_repo}/archive/refs/heads/{$github_branch}.zip";

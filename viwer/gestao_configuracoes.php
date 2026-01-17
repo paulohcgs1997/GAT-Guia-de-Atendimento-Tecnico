@@ -99,39 +99,6 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                         </div>
                     </div>
 
-                    <div class="config-section">
-                        <h3>🔗 Repositório GitHub (Atualizações)</h3>
-                        <p class="text-muted small mb-3">Configure o repositório GitHub para habilitar atualizações automáticas. Deixe em branco para detecção automática.</p>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="github_owner">Usuário/Organização</label>
-                                    <input type="text" id="github_owner" name="github_owner" 
-                                           placeholder="ex: microsoft">
-                                    <small class="text-muted">Nome do usuário ou organização no GitHub</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="github_repo">Nome do Repositório</label>
-                                    <input type="text" id="github_repo" name="github_repo" 
-                                           placeholder="ex: vscode">
-                                    <small class="text-muted">Nome do repositório (sem .git)</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info d-flex align-items-start mt-2">
-                            <i class="bi bi-info-circle me-2 mt-1"></i>
-                            <div class="small">
-                                <strong>Detecção Automática:</strong> Se você clonou este projeto de um repositório Git, 
-                                o sistema tentará detectar automaticamente o repositório de origem. Você só precisa 
-                                preencher estes campos se quiser apontar para um repositório diferente.
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="d-flex gap-2 justify-content-end mt-4">
                         <button type="button" class="btn btn-secondary" onclick="window.location.href='gestao.php'">
                             <i class="bi bi-arrow-left"></i> Cancelar
