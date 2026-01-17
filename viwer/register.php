@@ -226,29 +226,67 @@ if (!isset($systemName)) {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Response text:', text);
+                
+                // Tentar fazer parse do JSON
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Erro ao fazer parse do JSON:', e);
+                    throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                }
+                
                 loginContainer.style.display = 'block';
                 loadingScreen.classList.remove('active');
                 
+                console.log('Data recebida:', data);
+                
                 if (data.success) {
+                    // Limpar formulário
+                    document.getElementById('registerForm').reset();
+                    document.getElementById('usernameStatus').innerHTML = '';
+                    
+                    // Mostrar mensagem de sucesso grande e visível
                     mensagemDiv.innerHTML = `
-                        <div class="alert alert-success">
-                            <strong>Cadastro realizado com sucesso!</strong><br>
-                            ${data.message}<br>
-                            <a href="login.php" class="btn btn-primary mt-2">Ir para Login</a>
+                        <div class="alert alert-success" style="padding: 20px; margin: 20px 0; border-radius: 8px; background: #d1fae5; border: 2px solid #10b981;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+                                <h3 style="color: #065f46; margin: 10px 0;">Cadastro realizado com sucesso!</h3>
+                                <p style="color: #047857; font-size: 16px; margin: 15px 0;">
+                                    ${data.message || 'Sua conta será ativada após aprovação do administrador.'}
+                                </p>
+                                <a href="login.php" class="btn btn-primary" style="margin-top: 15px; padding: 12px 30px; font-size: 16px; text-decoration: none; display: inline-block; background: var(--primary-color); color: white; border-radius: 6px;">
+                                    Ir para Login
+                                </a>
+                            </div>
                         </div>
                     `;
-                    document.getElementById('registerForm').reset();
+                    
+                    // Scroll para a mensagem
+                    mensagemDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    mensagemDiv.innerHTML = `<div class="alert alert-danger">${data.erro || data.error}</div>`;
+                    mensagemDiv.innerHTML = `
+                        <div class="alert alert-danger" style="padding: 15px; margin: 15px 0; border-radius: 6px; background: #fee2e2; border: 2px solid #ef4444; color: #991b1b;">
+                            <strong>❌ Erro:</strong> ${data.erro || data.error || 'Erro desconhecido'}
+                        </div>
+                    `;
                 }
             })
             .catch(error => {
                 console.error('Erro no cadastro:', error);
                 loginContainer.style.display = 'block';
                 loadingScreen.classList.remove('active');
-                mensagemDiv.innerHTML = '<div class="alert alert-danger">Erro ao processar cadastro. Tente novamente.</div>';
+                mensagemDiv.innerHTML = `
+                    <div class="alert alert-danger" style="padding: 15px; margin: 15px 0; border-radius: 6px; background: #fee2e2; border: 2px solid #ef4444; color: #991b1b;">
+                        <strong>❌ Erro ao processar cadastro:</strong><br>${error.message}
+                    </div>
+                `;
             });
         });
     </script>

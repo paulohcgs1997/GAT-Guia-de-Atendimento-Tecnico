@@ -133,6 +133,7 @@ try {
         'success' => true,
         'message' => 'Cadastro realizado com sucesso! Sua conta será ativada após aprovação do administrador.'
     ]);
+    exit;
     
 } catch (Exception $e) {
     ob_clean();
@@ -141,5 +142,5 @@ try {
         'erro' => $e->getMessage()
     ]);
     error_log('Erro no registro: ' . $e->getMessage());
+    exit;
 }
-?>
