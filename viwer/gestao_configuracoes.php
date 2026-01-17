@@ -223,75 +223,19 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                                 Mantenha seu sistema atualizado com as últimas melhorias do GitHub
                             </p>
                             <small class="text-info">
-                                <i class="bi bi-git"></i> <strong>Branch:</strong> main (sempre atualiza do branch principal)
+                                <i class="bi bi-git"></i> <strong>Branch:</strong> main
+                                <span class="mx-2">|</span>
+                                <i class="bi bi-shield-lock"></i> <strong>Token:</strong> Configurado no servidor
                             </small>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-primary" onclick="showGithubConfig()">
-                                <i class="bi bi-gear"></i> Configurar Repositório
-                            </button>
+                        <div>
                             <button type="button" class="btn btn-success" onclick="checkSystemUpdates()" id="btnCheckUpdates">
                                 <i class="bi bi-arrow-repeat"></i> Verificar Atualizações
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Configuração do Repositório GitHub -->
-                    <div id="githubConfigSection" style="display: none; margin-bottom: 20px;">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0">⚙️ Configurar Repositório GitHub</h6>
-                            </div>
-                            <div class="card-body">
-                                <form id="githubConfigForm" onsubmit="saveGithubConfig(event)">
-                                    <div class="alert alert-info mb-3">
-                                        <strong>💡 Dica:</strong> Cole a URL do seu repositório GitHub e o sistema configurará automaticamente.
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="github_url" class="form-label">URL do Repositório GitHub *</label>
-                                        <input type="text" class="form-control form-control-lg" id="github_url" name="github_url" required
-                                               placeholder="https://github.com/usuario/repositorio">
-                                        <small class="text-muted">Cole a URL do GitHub (exemplo: https://github.com/paulohcgs1997/GAT-Guia-de-Atendimento-Tecnico)</small>
-                                    </div>
-                                    
-                                    <div id="urlDetectionResult" style="display: none; margin-bottom: 15px;">
-                                        <div class="alert alert-success">
-                                            <strong>✅ Repositório Detectado:</strong><br>
-                                            <span id="detectedInfo"></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="bi bi-save"></i> Salvar e Testar Repositório
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" onclick="hideGithubConfig()">
-                                            Cancelar
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <hr class="my-3">
-                    
-                    <!-- Badge de Status do Repositório -->
-                    <div id="repoStatusBadge" style="display: none; margin-bottom: 15px;">
-                        <div class="alert alert-success d-flex align-items-center" style="padding: 10px 15px;">
-                            <i class="bi bi-github me-2"></i>
-                            <div class="flex-grow-1">
-                                <small>
-                                    <strong>Repositório Configurado:</strong> 
-                                    <span id="repoUrl">-</span>
-                                </small>
-                            </div>
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-circle"></i> Auto-detectado
-                            </span>
-                        </div>
-                    </div>
                     
                     <div id="updateCheckResult">
                         <div class="alert alert-info d-flex align-items-center" role="alert">
@@ -344,72 +288,23 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <script src="../src/js/config-database.js"></script>
     <script src="../src/js/config-system.js"></script>
     <script src="../src/js/system-updater.js"></script>
-    <script src="../src/js/github-config.js"></script>
     
-    <!-- Auto-configuração e Verificação de Atualizações -->
+    <!-- Verificação Automática de Atualizações -->
     <script>
-        console.log('✅ Scripts carregados');
+        console.log('✅ Scripts carregados - Sistema de Atualizações');
         
-        // Flag para controlar se já configurou
-        let autoConfigAttempted = false;
-        
-        // Função para auto-configurar repositório silenciosamente
-        async function autoConfigureGithub() {
-            if (autoConfigAttempted) {
-                console.log('⏭️ Auto-configuração já tentada');
-                return;
-            }
-            
-            autoConfigAttempted = true;
-            console.log('🔧 Tentando auto-configurar repositório GitHub...');
-            
-            try {
-                const response = await fetch('../src/php/auto_config_github.php');
-                const data = await response.json();
-                
-                if (data.success) {
-                    console.log('✅ Repositório configurado automaticamente:', data.repository);
-                    
-                    // Mostrar badge de status
-                    const statusBadge = document.getElementById('repoStatusBadge');
-                    const repoUrl = document.getElementById('repoUrl');
-                    if (statusBadge && repoUrl) {
-                        repoUrl.innerHTML = `<a href="${data.repository}" target="_blank" style="color: inherit; text-decoration: underline;">${data.owner}/${data.repo}</a>`;
-                        statusBadge.style.display = 'block';
-                    }
-                    
-                    return true;
-                } else {
-                    console.log('⚠️ Auto-configuração falhou:', data.message);
-                    return false;
-                }
-            } catch (error) {
-                console.error('❌ Erro na auto-configuração:', error);
-                return false;
-            }
-        }
-        
-        // Teste: verificar se botões existem
+        // Auto-verificar atualizações quando a aba é ativada
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔍 DOM carregado');
             console.log('- checkSystemUpdates:', typeof checkSystemUpdates);
-            console.log('- showGithubConfig:', typeof showGithubConfig);
-            console.log('- saveGithubConfig:', typeof saveGithubConfig);
-            console.log('- tryAutoConfig:', typeof tryAutoConfig);
             console.log('- btnCheckUpdates:', document.getElementById('btnCheckUpdates'));
-            console.log('- githubConfigSection:', document.getElementById('githubConfigSection'));
             console.log('- updateCheckResult:', document.getElementById('updateCheckResult'));
             
-            // Auto-verificar atualizações quando a aba é ativada
             const updatesTab = document.getElementById('updates-tab');
             if (updatesTab) {
-                updatesTab.addEventListener('shown.bs.tab', async function() {
+                updatesTab.addEventListener('shown.bs.tab', function() {
                     console.log('📑 Aba de Atualizações ativada');
                     
-                    // Primeiro, tentar auto-configurar (se necessário)
-                    await autoConfigureGithub();
-                    
-                    // Depois verificar atualizações
                     setTimeout(() => {
                         if (typeof checkSystemUpdates === 'function') {
                             console.log('🚀 Verificando atualizações automaticamente...');
