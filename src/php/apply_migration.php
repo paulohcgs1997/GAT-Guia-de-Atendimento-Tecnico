@@ -88,6 +88,7 @@ try {
                 // Erros que podem ser ignorados (não críticos)
                 $ignorable_errors = [
                     'Duplicate column name',
+                    'Duplicate key name',
                     'already exists',
                     'Unknown column' // Se tentar atualizar coluna que não existe ainda
                 ];
@@ -110,8 +111,9 @@ try {
         } catch (Exception $e) {
             $error_msg = $e->getMessage();
             
-            // Ignorar erros de coluna duplicada
+            // Ignorar erros de coluna duplicada e chave duplicada
             if (stripos($error_msg, 'Duplicate column name') !== false || 
+                stripos($error_msg, 'Duplicate key name') !== false ||
                 stripos($error_msg, 'Unknown column') !== false) {
                 $skipped++;
                 $response['queries_executed'][] = "SKIPPED: " . substr($query, 0, 50) . '...';
