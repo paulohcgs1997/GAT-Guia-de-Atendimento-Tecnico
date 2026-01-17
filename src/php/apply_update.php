@@ -127,16 +127,15 @@ try {
     );
     
     foreach ($files as $file) {
-        if (!$file->isDir()) {
-            $filePath = $file->getRealPath();
-            $relativePath = substr($filePath, strlen($root_dir) + 1);
-            
-            // Ignorar backups, uploads e temp
-            if (strpos($relativePath, 'backups' . DIRECTORY_SEPARATOR) !== 0 && 
-                strpos($relativePath, 'uploads' . DIRECTORY_SEPARATOR) !== 0 && 
-                strpos($relativePath, 'temp_') !== 0) {
-                $zip->addFile($filePath, $relativePath);
-            }
+        $filePath = $file->getRealPath();
+        $relativePath = substr($filePath, strlen($root_dir) + 1);
+        
+        // Ignorar backups, uploads (AMBAS as pastas) e temp
+        if (strpos($relativePath, 'backups' . DIRECTORY_SEPARATOR) !== 0 && 
+            strpos($relativePath, 'uploads' . DIRECTORY_SEPARATOR) !== 0 && 
+            strpos($relativePath, 'src' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR) !== 0 && 
+            strpos($relativePath, 'temp_') !== 0) {
+            $zip->addFile($filePath, $relativePath);
         }
     }
     
@@ -203,8 +202,62 @@ try {
     $update_files_dir = $extracted_dirs[0] ?? $temp_dir;
     error_log('Diretório extraído: ' . $update_files_dir);
     
-    // PASSO 4: APLICAR ATUALIZAÇÃO
-    error_log('Aplicando arquivos...');
+    // PASSO 4: REMOVER ARQUIVOS ANTIGOS (EXCETO PROTEGIDOS)
+    error_log('Removendo arquivos antigos...');
+    
+    // Lista de diretórios e arquivos que NUNCA devem ser removidos
+    $protected_paths = [
+        'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'conexao.php',
+        'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'github_config.php',
+        'uploads',
+        'src' . DIRECTORY_SEPARATOR . 'uploads',
+        'backups',
+        'temp_restore_',
+        '.git',
+        '.last_update',
+        'version.json'
+    ];
+    
+    // Função para verificar se um caminho está protegido
+    function isProtectedPath($path, $protected_paths) {
+        foreach ($protected_paths as $protected) {
+            if (strpos($path, $protected) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // Coletar todos os arquivos atuais (exceto protegidos)
+    $current_files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST // CHILD_FIRST para deletar arquivos antes de pastas
+    );
+    
+    $files_to_delete = [];
+    foreach ($current_files as $file) {
+        $filePath = $file->getRealPath();
+        $relativePath = substr($filePath, strlen($root_dir) + 1);
+        
+        // Verificar se o caminho está protegido
+        if (!isProtectedPath($relativePath, $protected_paths)) {
+            $files_to_delete[] = $filePath;
+        }
+    }
+    
+    // Deletar arquivos coletados
+    foreach ($files_to_delete as $file_path) {
+        if (is_file($file_path)) {
+            unlink($file_path);
+        } elseif (is_dir($file_path)) {
+            @rmdir($file_path); // Só remove se estiver vazio
+        }
+    }
+    
+    error_log('Arquivos antigos removidos (exceto configurações e uploads)');
+    
+    // PASSO 5: APLICAR NOVOS ARQUIVOS
+    error_log('Aplicando arquivos novos...');
     
     $files = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($update_files_dir, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -215,11 +268,23 @@ try {
         $filePath = $file->getRealPath();
         $relativePath = substr($filePath, strlen($update_files_dir) + 1);
         
-        // Ignorar arquivos que não devem ser sobrescritos
+        // Ignorar arquivos que não devem ser sobrescritos (já existem e estão protegidos)
         if (strpos($relativePath, 'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'conexao.php') !== false ||
             strpos($relativePath, 'uploads' . DIRECTORY_SEPARATOR) === 0 ||
+            strpos($relativePath, 'src' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR) === 0 ||
             strpos($relativePath, 'backups' . DIRECTORY_SEPARATOR) === 0 ||
             strpos($relativePath, 'src' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'github_config.php') !== false) {
+            
+            // Se for arquivo de configuração exemplo (.example.php), copiar
+            if (strpos($relativePath, '.example.php') !== false) {
+                // Copiar arquivo exemplo (não sobrescrever configurações reais)
+                $targetPath = $root_dir . DIRECTORY_SEPARATOR . $relativePath;
+                $targetDir = dirname($targetPath);
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
+                copy($filePath, $targetPath);
+            }
             continue;
         }
         
@@ -240,7 +305,7 @@ try {
     
     error_log('Arquivos aplicados com sucesso');
     
-    // PASSO 5: LIMPAR TEMPORÁRIOS
+    // PASSO 6: LIMPAR TEMPORÁRIOS
     error_log('Limpando arquivos temporários...');
     
     function deleteDirectory($dir) {
@@ -327,7 +392,7 @@ try {
     file_put_contents($version_file, json_encode($version_info, JSON_PRETTY_PRINT));
     error_log('📝 Informações da versão salvas em .last_update: ' . json_encode($version_info));
     
-    // PASSO 6: APLICAR ATUALIZAÇÕES DE BANCO DE DADOS
+    // PASSO 7: APLICAR ATUALIZAÇÕES DE BANCO DE DADOS
     error_log('Verificando atualizações de banco de dados...');
     
     $db_updates_applied = 0;

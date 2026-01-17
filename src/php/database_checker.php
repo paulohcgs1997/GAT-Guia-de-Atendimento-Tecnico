@@ -119,6 +119,24 @@ try {
             }
         }
         
+        // Verificar INSERT com WHERE NOT EXISTS (scripts de manutenção/correção)
+        if (preg_match('/INSERT\s+INTO\s+\w+.*?WHERE\s+NOT\s+EXISTS/si', $sql_content)) {
+            // Se tem INSERT com WHERE NOT EXISTS, sempre mostrar (pode ser necessário)
+            $needs_update = true;
+            $missing_items[] = "Script de manutenção/correção";
+            
+            // Extrair tabelas do INSERT
+            if (preg_match_all('/INSERT\s+INTO\s+(\w+)/i', $sql_content, $insert_matches)) {
+                $tables_affected = array_merge($tables_affected, $insert_matches[1]);
+            }
+        }
+        
+        // Verificar se é script de verificação/diagnóstico (sempre mostrar)
+        if (preg_match('/verificar|diagnostico|check|fix|correcao/i', $filename)) {
+            $needs_update = true;
+            $missing_items[] = "Script de verificação/diagnóstico";
+        }
+        
         // Se precisa atualizar, adicionar à lista
         if ($needs_update) {
             $response['needs_update'] = true;
@@ -127,12 +145,20 @@ try {
             $priority = 'medium';
             if (strpos($filename, 'status') !== false || strpos($filename, 'users') !== false) {
                 $priority = 'high';
+            } elseif (strpos($filename, 'verificar') !== false || strpos($filename, 'diagnostico') !== false) {
+                $priority = 'low'; // Scripts de verificação têm prioridade baixa
+            }
+            
+            // Melhorar descrição para scripts de verificação
+            $update_description = !empty($description) ? $description : 'Atualização de banco de dados';
+            if (strpos($filename, 'verificar') !== false) {
+                $update_description = 'Script de verificação e correção do sistema';
             }
             
             $response['updates_available'][] = [
                 'id' => pathinfo($filename, PATHINFO_FILENAME),
                 'name' => ucwords(str_replace(['_', 'update', 'add'], [' ', '', ''], pathinfo($filename, PATHINFO_FILENAME))),
-                'description' => !empty($description) ? $description : 'Atualização de banco de dados',
+                'description' => $update_description,
                 'tables_affected' => array_unique($tables_affected),
                 'file' => $filename,
                 'priority' => $priority,
