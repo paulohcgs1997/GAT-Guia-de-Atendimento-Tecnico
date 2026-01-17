@@ -255,11 +255,10 @@ if (!isset($systemName)) {
                 console.log('Data recebida:', data);
                 
                 if (data.success) {
-                    // Limpar formulário
-                    document.getElementById('registerForm').reset();
-                    document.getElementById('usernameStatus').innerHTML = '';
+                    // Esconder o formulário completamente
+                    loginContainer.style.display = 'none';
                     
-                    // Mostrar mensagem de sucesso grande e visível
+                    // Mostrar mensagem de sucesso grande e visível (substituindo o conteúdo)
                     mensagemDiv.innerHTML = `
                         <div style="padding: 30px; margin: 20px 0; border-radius: 12px; background: #d1fae5; border: 3px solid #10b981; text-align: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
                             <div style="font-size: 64px; margin-bottom: 15px; animation: bounce 1s;">✓</div>
@@ -272,6 +271,7 @@ if (!isset($systemName)) {
                             </a>
                         </div>
                     `;
+                    mensagemDiv.style.display = 'block';
                     
                     // Scroll suave para a mensagem
                     setTimeout(() => {
