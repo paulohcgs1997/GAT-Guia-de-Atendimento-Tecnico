@@ -23,27 +23,33 @@ try {
         throw new Exception('ID da migração não informado');
     }
     
-    // Definir migrações disponíveis
-    $migrations = [
-        'status_field' => [
-            'file' => '../../install/update_status_field.sql',
-            'description' => 'Adiciona campo status'
-        ],
-        'force_password_change' => [
-            'file' => '../../install/add_force_password_change.sql',
-            'description' => 'Adiciona campo force_password_change para troca obrigatória de senha'
-        ]
-    ];
+    // Buscar arquivo SQL na pasta install baseado no migration_id
+    $install_dir = __DIR__ . '/../../install';
+    $sql_file = $install_dir . '/' . $migration_id . '.sql';
     
-    if (!isset($migrations[$migration_id])) {
-        throw new Exception('Migração não encontrada');
+    // Se não existir com o ID exato, tentar encontrar arquivo que contenha o ID
+    if (!file_exists($sql_file)) {
+        $possible_files = glob($install_dir . '/*' . $migration_id . '*.sql');
+        if (count($possible_files) > 0) {
+            $sql_file = $possible_files[0];
+        }
     }
     
-    $migration = $migrations[$migration_id];
-    $sql_file = __DIR__ . '/' . $migration['file'];
+    // Se ainda não encontrou, tentar procurar por nome de arquivo completo
+    if (!file_exists($sql_file)) {
+        // Tentar buscar todos os arquivos SQL e verificar qual corresponde
+        $all_sql_files = glob($install_dir . '/*.sql');
+        foreach ($all_sql_files as $file) {
+            $file_id = pathinfo($file, PATHINFO_FILENAME);
+            if ($file_id === $migration_id || strpos($file_id, $migration_id) !== false) {
+                $sql_file = $file;
+                break;
+            }
+        }
+    }
     
     if (!file_exists($sql_file)) {
-        throw new Exception("Arquivo SQL não encontrado: $sql_file");
+        throw new Exception("Arquivo de migração não encontrado. Procurado: $migration_id");
     }
     
     // Ler o arquivo SQL
