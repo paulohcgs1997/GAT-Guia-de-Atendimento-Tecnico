@@ -223,19 +223,39 @@ if ($action === 'install') {
             $mysqli = new mysqli($host, $user, $pass, $dbname);
             $mysqli->set_charset('utf8mb4');
             
+            if ($mysqli->connect_errno) {
+                throw new Exception('Erro ao reconectar: ' . $mysqli->connect_error);
+            }
+            
+            error_log('========== INSTALAÇÃO: INICIANDO ATUALIZAÇÕES SQL ==========');
+            
             // Buscar arquivos de atualização na pasta install/update_sql primeiro
             $update_sql_dir = __DIR__ . '/update_sql';
             $all_update_files = [];
             
+            error_log('Instalação: Verificando pasta: ' . $update_sql_dir);
+            
             if (is_dir($update_sql_dir)) {
                 // Buscar TODOS os arquivos SQL na pasta update_sql
                 $all_update_files = glob($update_sql_dir . '/*.sql');
+                error_log('Instalação: Encontrados em update_sql/: ' . count($all_update_files));
+                
+                foreach ($all_update_files as $file) {
+                    error_log('Instalação: Arquivo encontrado: ' . basename($file));
+                }
+            } else {
+                error_log('Instalação: Pasta update_sql NÃO EXISTE!');
             }
             
             // Se não encontrou nada em update_sql, buscar na pasta install (fallback)
             if (empty($all_update_files)) {
+                error_log('Instalação: Fazendo fallback para pasta install/');
+                
                 $update_files = glob(__DIR__ . '/update_*.sql');
                 $add_files = glob(__DIR__ . '/add_*.sql');
+                
+                error_log('Instalação: update_*.sql: ' . count($update_files));
+                error_log('Instalação: add_*.sql: ' . count($add_files));
                 
                 // Mesclar os dois arrays e filtrar database.sql
                 $all_update_files = array_merge($update_files, $add_files);
@@ -244,19 +264,30 @@ if ($action === 'install') {
                 });
             }
             
-            error_log('Instalação: Encontrados ' . count($all_update_files) . ' arquivos de atualização');
+            error_log('Instalação: TOTAL de arquivos a processar: ' . count($all_update_files));
+            
+            if (empty($all_update_files)) {
+                $updates_errors[] = "⚠️ Nenhum arquivo SQL de atualização encontrado!";
+                error_log('Instalação: AVISO - Nenhum arquivo encontrado para aplicar!');
+            }
             
             foreach ($all_update_files as $update_file) {
                 $filename = basename($update_file);
+                
+                error_log("========== Processando: $filename ==========");
                 
                 try {
                     // Ler conteúdo do arquivo
                     $sql_content = file_get_contents($update_file);
                     
                     if ($sql_content === false) {
-                        $updates_errors[] = "$filename: Não foi possível ler o arquivo";
+                        $error_msg = "$filename: Não foi possível ler o arquivo";
+                        $updates_errors[] = $error_msg;
+                        error_log("Instalação: ERRO - $error_msg");
                         continue;
                     }
+                    
+                    error_log("Instalação: Arquivo lido com sucesso, tamanho: " . strlen($sql_content) . " bytes");
                     
                     // Remover comentários SQL
                     $sql_content = preg_replace('/--[^\n]*\n/', "\n", $sql_content);
@@ -265,63 +296,102 @@ if ($action === 'install') {
                     // Dividir queries por ponto e vírgula
                     $queries = array_filter(array_map('trim', preg_split('/;[\s]*(\n|$)/', $sql_content)));
                     
+                    error_log("Instalação: Dividido em " . count($queries) . " query(ies)");
+                    
                     $executed = 0;
                     $skipped = 0;
                     $errors = 0;
                     
-                    foreach ($queries as $query) {
-                        if (empty($query) || strlen($query) < 5) continue;
+                    foreach ($queries as $idx => $query) {
+                        if (empty($query) || strlen($query) < 5) {
+                            error_log("Instalação: Query #$idx ignorada (vazia ou muito curta)");
+                            continue;
+                        }
+                        
+                        error_log("Instalação: Executando query #$idx: " . substr($query, 0, 100) . "...");
                         
                         if ($mysqli->query($query)) {
                             $executed++;
-                            error_log("Instalação: Query executada com sucesso ($filename)");
+                            error_log("Instalação: ✅ Query #$idx executada com sucesso");
                         } else {
                             $error = $mysqli->error;
-                            error_log("Instalação: Erro ao executar query ($filename): $error");
+                            error_log("Instalação: ❌ Erro na query #$idx: $error");
                             
                             // Ignorar apenas erros específicos que não são críticos
                             if (stripos($error, 'Duplicate column name') !== false || 
                                 stripos($error, 'already exists') !== false ||
                                 stripos($error, 'Duplicate key name') !== false) {
                                 $skipped++;
-                                error_log("Instalação: Erro não-crítico ignorado ($filename)");
+                                error_log("Instalação: ⏭️ Erro não-crítico ignorado (já existe)");
                             } else {
                                 $errors++;
-                                $updates_errors[] = "$filename: $error";
+                                $updates_errors[] = "$filename [Query #$idx]: $error";
+                                error_log("Instalação: ⚠️ ERRO CRÍTICO registrado");
                             }
                         }
                     }
+                    
+                    // Log do resultado final deste arquivo
+                    error_log("Instalação: Resultado $filename - Executadas: $executed, Ignoradas: $skipped, Erros: $errors");
                     
                     if ($executed > 0) {
                         $updates_log[] = "✅ $filename: $executed comando(s) executado(s)";
                     }
                     
-                    if ($skipped > 0) {
-                        $updates_log[] = "⏭️ $filename: $skipped já existente(s)";
-                    }
-                    
-                    if ($errors > 0) {
-                        $updates_log[] = "⚠️ $filename: $errors erro(s)";
-                    }
-                    
-                } catch (Exception $e) {
-                    $error_msg = "$filename: " . $e->getMessage();
-                    $updates_errors[] = $error_msg;
-                    error_log("Instalação: Exception - $error_msg");
-                }
-            }
-            
-            $mysqli->close();
+            error_log('========== INSTALAÇÃO: ATUALIZAÇÕES FINALIZADAS ==========');
+            error_log('Total de logs: ' . count($updates_log));
+            error_log('Total de erros: ' . count($updates_errors));
             
         } catch (Exception $e) {
-            $updates_errors[] = "Erro ao aplicar atualizações: " . $e->getMessage();
-            error_log("Instalação: Erro geral - " . $e->getMessage());
+            $error_msg = "Erro ao aplicar atualizações: " . $e->getMessage();
+            $updates_errors[] = $error_msg;
+            error_log("Instalação: ERRO GERAL - $error_msg");
+            error_log("Instalação: Stack trace: " . $e->getTraceAsString());
         }
         
-        // Preparar mensagem de resposta
+        // Preparar mensagem de resposta com informações detalhadas
         $message = '🎉 Sistema instalado com sucesso!';
         
+        $total_files = isset($all_update_files) ? count($all_update_files) : 0;
+        
+        if ($total_files > 0) {
+            $message .= "\n\n📦 Arquivos SQL encontrados: $total_files";
+        } else {
+            $message .= "\n\n⚠️ ATENÇÃO: Nenhum arquivo SQL de atualização foi encontrado!";
+            $message .= "\n📂 Verifique se a pasta install/update_sql/ existe e contém os arquivos.";
+        }
+        
         if (count($updates_log) > 0) {
+            $message .= "\n\n✅ Atualizações aplicadas:\n" . implode("\n", $updates_log);
+        } else if ($total_files > 0) {
+            $message .= "\n\n⚠️ Nenhuma atualização foi aplicada (todos os arquivos falharam ou já existiam).";
+        }
+        
+        if (count($updates_errors) > 0) {
+            $message .= "\n\n⚠️ Erros detectados (" . count($updates_errors) . "):\n" . implode("\n", array_slice($updates_errors, 0, 5));
+            
+            if (count($updates_errors) > 5) {
+                $message .= "\n... e mais " . (count($updates_errors) - 5) . " erro(s)";
+            }
+            
+            $message .= "\n\n💡 Execute manualmente o arquivo install/fix_usuarios_structure.sql no seu banco de dados.";
+            $message .= "\nOu acesse: Configurações → Verificador de Banco de Dados";
+        }
+        
+        error_log("Instalação: Mensagem final preparada");
+        error_log("Instalação: ========== FIM ==========");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => $message,
+            'updates_applied' => count($updates_log),
+            'updates_errors' => count($updates_errors),
+            'sql_files_found' => $total_files,
+            'debug_info' => [
+                'update_sql_dir_exists' => isset($update_sql_dir) && is_dir($update_sql_dir),
+                'update_sql_dir_path' => isset($update_sql_dir) ? $update_sql_dir : 'N/A',
+                'files_found' => $total_files
+            ]
             $message .= "\n\n📦 Atualizações SQL aplicadas (" . count($all_update_files) . " arquivo(s)):\n" . implode("\n", $updates_log);
         } else {
             $message .= "\n\n⚠️ Nenhuma atualização SQL foi aplicada.";
