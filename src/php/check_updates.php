@@ -70,8 +70,8 @@ try {
     $release_data = @file_get_contents($releases_url, false, $context);
     
     if ($release_data === false) {
-        // Se não há releases, tentar obter info do último commit do branch main
-        $commits_url = "{$github_api_url}/commits/{$github_branch}";
+        // Se não há releases, buscar último commit do branch main
+        $commits_url = "{$github_api_url}/commits/main";
         $commit_data = @file_get_contents($commits_url, false, $context);
         
         if ($commit_data === false) {
@@ -87,12 +87,12 @@ try {
             'success' => true,
             'has_update' => false,
             'current_version' => $current_version['version'],
-            'latest_version' => 'desenvolvimento',
+            'latest_version' => $current_version['version'],
             'current_build' => $current_version['build'],
-            'message' => 'Sistema está em versão de desenvolvimento',
+            'message' => 'Sistema atualizado (branch main)',
             'repository' => "{$github_owner}/{$github_repo}",
             'branch' => 'main',
-            'download_url' => $main_branch_download,  // Sempre do branch main
+            'download_url' => $main_branch_download,
             'last_commit' => [
                 'sha' => substr($commit['sha'], 0, 7),
                 'message' => $commit['commit']['message'],
