@@ -241,7 +241,7 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                         <div class="alert alert-info d-flex align-items-center" role="alert">
                             <i class="bi bi-info-circle-fill me-2" style="font-size: 24px;"></i>
                             <div>
-                                Clique em <strong>"Verificar Atualizações"</strong> para checar se há novas versões disponíveis no GitHub.
+                                Clique em <strong>"Verificar Atualizações"</strong> para checar se ha novas versões disponíveis no GitHub.
                             </div>
                         </div>
                     </div>
