@@ -3,7 +3,11 @@
   "type": "development",
   "stability": "experimental",
   "description": "Canal com recursos experimentais e novas funcionalidades",
-  "features": [],
+  "features": [
+    "Novas funcionalidades em teste",
+    "Aprimoramentos frequentes",
+    "Feedback ativo dos usuários"
+  ],
   "warnings": [
     "Pode conter bugs",
     "Não recomendado para produção"
