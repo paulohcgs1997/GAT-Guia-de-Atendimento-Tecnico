@@ -205,6 +205,10 @@ footer {
     color: var(--text-inverse);
     text-align: center;
     padding: 1rem;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
 }
 
 /* === Barra de Pesquisa === */
@@ -431,6 +435,7 @@ footer {
 /* === Página de Login === */
 body.login-page {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
