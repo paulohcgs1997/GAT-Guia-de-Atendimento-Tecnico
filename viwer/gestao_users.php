@@ -20,6 +20,22 @@ $users_query = "SELECT u.*, p.type as perfil_type, d.name as dept_name
                 LEFT JOIN departaments d ON u.departamento = d.id
                 ORDER BY u.active DESC, u.last_login DESC";
 $users = $mysqli->query($users_query);
+
+// Verificar se existe coluna 'status' na tabela usuarios
+$sql_check_status = "SHOW COLUMNS FROM usuarios LIKE 'status'";
+$result_check_status = $mysqli->query($sql_check_status);
+$has_status_column = ($result_check_status->num_rows > 0);
+
+// Se existe coluna status, buscar usuários pendentes
+$pending_users = null;
+if ($has_status_column) {
+    $pending_query = "SELECT u.*, p.type as perfil_type 
+                      FROM usuarios u 
+                      LEFT JOIN perfil p ON u.perfil = p.id 
+                      WHERE u.status = 'pending'
+                      ORDER BY u.id DESC";
+    $pending_users = $mysqli->query($pending_query);
+}
 ?>
 
 <!DOCTYPE html>
@@ -41,6 +57,64 @@ $users = $mysqli->query($users_query);
                 <h1>👥 Gestão de Usuários</h1>
                 <button class="btn-primary" onclick="openModal()">+ Novo Usuário</button>
             </div>
+
+            <?php if ($has_status_column && $pending_users && $pending_users->num_rows > 0): ?>
+            <!-- Seção de Usuários Pendentes -->
+            <div class="alert alert-warning" style="margin-bottom: 20px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>⏳ <?= $pending_users->num_rows ?> usuário(s) aguardando aprovação</strong>
+                    </div>
+                    <button class="btn btn-success" onclick="approveAllSelected()">
+                        <i class="bi bi-check-circle"></i> Aprovar Selecionados
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
+                <div class="card-header" style="background: #fbbf24; color: #78350f; font-weight: 600;">
+                    ⏳ Usuários Pendentes de Aprovação
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <table class="data-table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAllPending" onchange="toggleAllPending(this)">
+                                </th>
+                                <th>ID</th>
+                                <th>Usuário</th>
+                                <th>E-mail</th>
+                                <th>Nome Completo</th>
+                                <th>Data de Cadastro</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            $pending_users->data_seek(0); // Reset pointer
+                            while($user = $pending_users->fetch_assoc()): 
+                            ?>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="pending-checkbox" value="<?= $user['id'] ?>">
+                                </td>
+                                <td><?= $user['id'] ?></td>
+                                <td><?= htmlspecialchars($user['user']) ?></td>
+                                <td><?= isset($user['email']) ? htmlspecialchars($user['email']) : '-' ?></td>
+                                <td><?= isset($user['nome_completo']) && !empty($user['nome_completo']) ? htmlspecialchars($user['nome_completo']) : '-' ?></td>
+                                <td><?= isset($user['created_at']) ? date('d/m/Y H:i', strtotime($user['created_at'])) : '-' ?></td>
+                                <td class="actions-cell">
+                                    <button class="btn-icon btn-approve" onclick="approveUser(<?= $user['id'] ?>)" title="Aprovar">✓</button>
+                                    <button class="btn-icon btn-delete" onclick="rejectUser(<?= $user['id'] ?>)" title="Rejeitar">✗</button>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div class="table-container">
                 <table class="data-table">
@@ -174,6 +248,98 @@ $users = $mysqli->query($users_query);
 
     <script>
         let isEditMode = false;
+        
+        // Função para alternar seleção de todos os usuários pendentes
+        function toggleAllPending(checkbox) {
+            const checkboxes = document.querySelectorAll('.pending-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+        
+        // Função para aprovar usuários selecionados em lote
+        async function approveAllSelected() {
+            const checkboxes = document.querySelectorAll('.pending-checkbox:checked');
+            const userIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (userIds.length === 0) {
+                alert('⚠️ Selecione ao menos um usuário para aprovar');
+                return;
+            }
+            
+            if (!confirm(`Deseja aprovar ${userIds.length} usuário(s)?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('../src/php/crud_users.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=approve_batch&user_ids=${JSON.stringify(userIds)}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + (data.erro || 'Erro ao aprovar usuários'));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao processar aprovação em lote');
+            }
+        }
+        
+        // Função para aprovar um usuário individual
+        async function approveUser(userId) {
+            if (!confirm('Deseja aprovar este usuário?')) return;
+            
+            try {
+                const response = await fetch('../src/php/crud_users.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=approve&id=${userId}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Usuário aprovado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('❌ ' + (data.erro || 'Erro ao aprovar usuário'));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao processar aprovação');
+            }
+        }
+        
+        // Função para rejeitar um usuário
+        async function rejectUser(userId) {
+            const motivo = prompt('Motivo da rejeição (opcional):');
+            if (motivo === null) return; // Cancelou
+            
+            try {
+                const response = await fetch('../src/php/crud_users.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=reject&id=${userId}&motivo=${encodeURIComponent(motivo)}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Usuário rejeitado');
+                    location.reload();
+                } else {
+                    alert('❌ ' + (data.erro || 'Erro ao rejeitar usuário'));
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao processar rejeição');
+            }
+        }
         
         function toggleDepartamentoField() {
             const perfil = document.getElementById('perfil').value;

@@ -16,6 +16,95 @@ if ($_SESSION['perfil'] != '1') {
 
 $action = $_POST['action'] ?? 'save';
 
+// ========== APROVAR USUÁRIOS EM LOTE ==========
+if ($action === 'approve_batch') {
+    $user_ids = json_decode($_POST['user_ids'] ?? '[]', true);
+    
+    if (empty($user_ids) || !is_array($user_ids)) {
+        echo json_encode(['success' => false, 'erro' => 'Nenhum usuário selecionado']);
+        exit;
+    }
+    
+    // Verificar se existe coluna 'status'
+    $sql_check = "SHOW COLUMNS FROM usuarios LIKE 'status'";
+    $result_check = $mysqli->query($sql_check);
+    $has_status = ($result_check->num_rows > 0);
+    
+    $placeholders = implode(',', array_fill(0, count($user_ids), '?'));
+    
+    if ($has_status) {
+        $sql = "UPDATE usuarios SET status = 'approved', active = 1 WHERE id IN ($placeholders) AND status = 'pending'";
+    } else {
+        $sql = "UPDATE usuarios SET active = 1 WHERE id IN ($placeholders)";
+    }
+    
+    $stmt = $mysqli->prepare($sql);
+    $types = str_repeat('i', count($user_ids));
+    $stmt->bind_param($types, ...$user_ids);
+    
+    if ($stmt->execute()) {
+        $affected = $stmt->affected_rows;
+        echo json_encode(['success' => true, 'message' => "$affected usuário(s) aprovado(s) com sucesso!"]);
+    } else {
+        echo json_encode(['success' => false, 'erro' => 'Erro ao aprovar usuários: ' . $stmt->error]);
+    }
+    exit;
+}
+
+// ========== APROVAR USUÁRIO INDIVIDUAL ==========
+if ($action === 'approve') {
+    $id = intval($_POST['id']);
+    
+    // Verificar se existe coluna 'status'
+    $sql_check = "SHOW COLUMNS FROM usuarios LIKE 'status'";
+    $result_check = $mysqli->query($sql_check);
+    $has_status = ($result_check->num_rows > 0);
+    
+    if ($has_status) {
+        $sql = "UPDATE usuarios SET status = 'approved', active = 1 WHERE id = ? AND status = 'pending'";
+    } else {
+        $sql = "UPDATE usuarios SET active = 1 WHERE id = ?";
+    }
+    
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('i', $id);
+    
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        echo json_encode(['success' => true, 'message' => 'Usuário aprovado com sucesso!']);
+    } else {
+        echo json_encode(['success' => false, 'erro' => 'Erro ao aprovar usuário ou usuário não está pendente']);
+    }
+    exit;
+}
+
+// ========== REJEITAR USUÁRIO ==========
+if ($action === 'reject') {
+    $id = intval($_POST['id']);
+    $motivo = $_POST['motivo'] ?? '';
+    
+    // Verificar se existe coluna 'status'
+    $sql_check = "SHOW COLUMNS FROM usuarios LIKE 'status'";
+    $result_check = $mysqli->query($sql_check);
+    $has_status = ($result_check->num_rows > 0);
+    
+    if ($has_status) {
+        $sql = "UPDATE usuarios SET status = 'rejected' WHERE id = ? AND status = 'pending'";
+    } else {
+        // Se não tem status, apenas deleta o usuário
+        $sql = "DELETE FROM usuarios WHERE id = ? AND active = 0";
+    }
+    
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('i', $id);
+    
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        echo json_encode(['success' => true, 'message' => 'Usuário rejeitado']);
+    } else {
+        echo json_encode(['success' => false, 'erro' => 'Erro ao rejeitar usuário']);
+    }
+    exit;
+}
+
 // ========== ALTERNAR STATUS DO USUÁRIO ==========
 if ($action === 'toggle_status') {
     $id = intval($_POST['id']);

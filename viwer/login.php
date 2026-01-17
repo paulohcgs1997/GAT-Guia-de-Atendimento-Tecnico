@@ -109,6 +109,11 @@ if (!isset($systemName)) {
             
             <!-- Mensagens de Erro -->
             <div id="mensagem"></div>
+            
+            <!-- Link para Cadastro -->
+            <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <p class="text-muted">Não tem uma conta? <a href="register.php" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Cadastre-se aqui</a></p>
+            </div>
         </div>
     </div>
 
