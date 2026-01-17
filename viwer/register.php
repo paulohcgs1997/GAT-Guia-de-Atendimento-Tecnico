@@ -128,7 +128,7 @@ if (!isset($systemName)) {
             <div id="mensagem" style="margin-top: 20px;"></div>
             
             <!-- Link para Login -->
-            <div style="text-align: center; margin-top: 20px;">
+            <div id="loginLink" style="text-align: center; margin-top: 20px;">
                 <p class="text-muted">Já tem uma conta? <a href="login.php" style="color: var(--primary-color); font-weight: 600;">Entrar</a></p>
             </div>
         </div>
@@ -255,8 +255,9 @@ if (!isset($systemName)) {
                 console.log('Data recebida:', data);
                 
                 if (data.success) {
-                    // Esconder o formulário completamente
-                    loginContainer.style.display = 'none';
+                    // Esconder o formulário e o link de login
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('loginLink').style.display = 'none';
                     
                     // Mostrar mensagem de sucesso grande e visível (substituindo o conteúdo)
                     mensagemDiv.innerHTML = `
@@ -272,6 +273,7 @@ if (!isset($systemName)) {
                         </div>
                     `;
                     mensagemDiv.style.display = 'block';
+                    loginContainer.style.display = 'block';
                     
                     // Scroll suave para a mensagem
                     setTimeout(() => {
