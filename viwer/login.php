@@ -110,11 +110,11 @@ if (!isset($systemName)) {
             <!-- Mensagens de Erro -->
             <div id="mensagem"></div>
         </div>
-        
-        <footer>
-            <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($systemName); ?>. Todos os direitos reservados.</p>
-        </footer>
     </div>
+
+    <footer>
+        <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($systemName); ?>. Todos os direitos reservados.</p>
+    </footer>
 
     <!-- Scripts -->
     <script>
