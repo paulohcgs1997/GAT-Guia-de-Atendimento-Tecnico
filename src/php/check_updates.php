@@ -135,7 +135,7 @@ try {
             'latest_version' => $current_version['version'],
             'current_build' => $current_version['build'],
             'remote_build' => $remote_commit_hash,
-            'message' => $has_update ? 'Nova versão disponível (commits mais recentes)' : 'Sistema atualizado (branch ' . $github_branch . ')',
+            'message' => $has_update ? 'Nova versão disponível (commits mais recentes)' : 'Sistema atualizado Não é necessário atualização. (branch ' . $github_branch . ')',
             'repository' => "{$github_owner}/{$github_repo}",
             'branch' => $github_branch,
             'download_url' => $branch_download_url,
