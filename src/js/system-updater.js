@@ -150,6 +150,16 @@ ${data.release_info.body || 'Sem descrição disponível'}
                         </div>
                         <p class="mb-0">Você está usando a versão mais recente: <strong>v${data.current_version}</strong></p>
                         <small class="text-muted">Build: ${data.current_build} | Repositório: ${data.repository || 'N/A'}</small>
+                        
+                        <!-- Botão para forçar reinstalação (útil para testes ou correções) -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-warning" onclick="applySystemUpdate('${data.download_url}', '${data.current_version}', true)">
+                                <i class="bi bi-arrow-clockwise"></i> Forçar Reinstalação (Teste)
+                            </button>
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-info-circle"></i> Útil para restaurar arquivos ou testar o sistema de atualização
+                            </small>
+                        </div>
                     </div>
                 </div>
             `;
@@ -232,8 +242,12 @@ async function tryAutoConfig() {
     }
 }
 
-async function applySystemUpdate(downloadUrl, version) {
-    if (!confirm(`Deseja realmente atualizar para a versão ${version}?\n\nUm backup será criado automaticamente antes da atualização.`)) {
+async function applySystemUpdate(downloadUrl, version, forceReinstall = false) {
+    const message = forceReinstall 
+        ? `Deseja realmente forçar a reinstalação da versão ${version}?\n\nUm backup será criado automaticamente.`
+        : `Deseja realmente atualizar para a versão ${version}?\n\nUm backup será criado automaticamente antes da atualização.`;
+    
+    if (!confirm(message)) {
         return;
     }
     
@@ -259,12 +273,15 @@ async function applySystemUpdate(downloadUrl, version) {
         const formData = new FormData();
         formData.append('download_url', downloadUrl);
         
+        console.log('🚀 Enviando requisição de atualização...');
         const response = await fetch('../src/php/apply_update.php', {
             method: 'POST',
             body: formData
         });
         
+        console.log('📡 Response status:', response.status);
         const data = await response.json();
+        console.log('📦 Resposta do servidor:', data);
         
         if (data.success) {
             resultDiv.innerHTML = `
@@ -285,7 +302,9 @@ async function applySystemUpdate(downloadUrl, version) {
                 </div>
             `;
         } else {
-            throw new Error(data.error);
+            const error = new Error(data.error);
+            error.debug = data.debug;
+            throw error;
         }
         
     } catch (error) {
@@ -295,6 +314,7 @@ async function applySystemUpdate(downloadUrl, version) {
                 <div>
                     <strong>Erro ao aplicar atualização</strong>
                     <p class="mb-0 mt-1">${error.message}</p>
+                    ${error.debug ? '<pre class="mt-2 mb-0 small">' + JSON.stringify(error.debug, null, 2) + '</pre>' : ''}
                     <small class="text-muted">O sistema permanece na versão anterior.</small>
                 </div>
             </div>
