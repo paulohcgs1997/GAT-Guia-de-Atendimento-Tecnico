@@ -61,6 +61,35 @@ function createInstallFlag() {
     return file_put_contents($flagPath, date('Y-m-d H:i:s'));
 }
 
+// Função para criar arquivo de configuração do GitHub
+function createGitHubConfigFile($token) {
+    $configPath = dirname(__DIR__) . '/src/config/github_config.php';
+    
+    // Escapa aspas simples no token
+    $token = str_replace("'", "\\'", $token);
+    
+    $content = "<?php
+/**
+ * Configuração do GitHub para Sistema de Atualizações
+ * Configurado automaticamente durante a instalação
+ */
+
+// GitHub Personal Access Token
+define('GITHUB_TOKEN', '{$token}');
+
+// Proprietário do repositório
+define('GITHUB_OWNER', 'paulohcgs1997');
+
+// Nome do repositório
+define('GITHUB_REPO', 'GAT-Guia-de-Atendimento-Tecnico');
+
+// Branch para atualizações (sempre 'main')
+define('GITHUB_BRANCH', 'main');
+";
+    
+    return file_put_contents($configPath, $content);
+}
+
 // Ação: Testar conexão com banco
 if ($action === 'test_db') {
     $host = $input['db_host'] ?? 'localhost';
@@ -174,6 +203,12 @@ if ($action === 'install') {
         // Cria o arquivo de configuração
         if (!createConfigFile($host, $dbname, $user, $pass)) {
             throw new Exception('Erro ao criar arquivo de configuração');
+        }
+        
+        // Cria arquivo de configuração do GitHub (se token foi fornecido)
+        $githubToken = $admin['github_token'] ?? '';
+        if (!empty($githubToken)) {
+            createGitHubConfigFile($githubToken);
         }
         
         // Cria flag de instalação

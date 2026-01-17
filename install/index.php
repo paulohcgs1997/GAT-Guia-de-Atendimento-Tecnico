@@ -315,6 +315,21 @@ if (isset($_GET['error']) && $_GET['error'] === 'not_installed') {
                         <input type="password" id="admin_pass_confirm" name="admin_pass_confirm" required>
                     </div>
 
+                    <hr style="margin: 30px 0; border: 1px solid #e0e0e0;">
+                    
+                    <h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">
+                        🔐 GitHub Token (Atualizações Automáticas)
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label for="github_token">GitHub Personal Access Token (Opcional)</label>
+                        <input type="password" id="github_token" name="github_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                        <small>
+                            Token para atualizações automáticas via GitHub. 
+                            <a href="https://github.com/settings/tokens/new" target="_blank">Gerar token aqui</a>
+                        </small>
+                    </div>
+
                     <button type="submit" class="btn">Instalar Sistema →</button>
                 </form>
             </div>
