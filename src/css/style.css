@@ -463,6 +463,7 @@ body.login-page::before {
     max-width: 420px;
     position: relative;
     z-index: 1;
+    margin: auto 0;
 }
 
 /* === Logo e Cabeçalho === */
