@@ -16,6 +16,29 @@ if ($_SESSION['perfil'] != '1') {
 
 $action = $_POST['action'] ?? 'save';
 
+// ========== VERIFICAR DISPONIBILIDADE DE USERNAME ==========
+if ($action === 'check_username') {
+    $username = trim($_POST['username'] ?? '');
+    
+    if (empty($username)) {
+        echo json_encode(['available' => false, 'message' => 'Username vazio']);
+        exit;
+    }
+    
+    $stmt = $mysqli->prepare("SELECT id FROM usuarios WHERE user = ?");
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $available = ($result->num_rows === 0);
+    
+    echo json_encode([
+        'available' => $available,
+        'message' => $available ? 'Username disponível' : 'Username já existe'
+    ]);
+    exit;
+}
+
 // ========== APROVAR USUÁRIOS EM LOTE ==========
 if ($action === 'approve_batch') {
     $user_ids = json_decode($_POST['user_ids'] ?? '[]', true);
@@ -318,5 +341,141 @@ if ($id) {
     } else {
         echo json_encode(['success' => false, 'message' => 'Erro ao criar usuário: ' . $stmt->error]);
     }
+}
+
+// ========== EDIÇÃO EM LOTE ==========
+if ($action === 'batch_edit') {
+    $user_ids = json_decode($_POST['user_ids'] ?? '[]', true);
+    $perfil = $_POST['perfil'] ?? '';
+    $departamento = $_POST['departamento'] ?? '';
+    $status = $_POST['status'] ?? '';
+    
+    if (empty($user_ids) || !is_array($user_ids)) {
+        echo json_encode(['success' => false, 'message' => 'Nenhum usuário selecionado']);
+        exit;
+    }
+    
+    // Remover o próprio usuário da lista
+    $user_ids = array_filter($user_ids, function($id) {
+        return $id != $_SESSION['user_id'];
+    });
+    
+    if (empty($user_ids)) {
+        echo json_encode(['success' => false, 'message' => 'Você não pode editar seu próprio usuário em lote']);
+        exit;
+    }
+    
+    // Verificar se ao menos um campo foi informado
+    if (empty($perfil) && empty($departamento) && $status === '') {
+        echo json_encode(['success' => false, 'message' => 'Nenhuma alteração a ser aplicada']);
+        exit;
+    }
+    
+    $mysqli->begin_transaction();
+    
+    try {
+        $updates = [];
+        $params = [];
+        $types = '';
+        
+        // Adicionar campos a serem atualizados
+        if (!empty($perfil)) {
+            $updates[] = "perfil = ?";
+            $params[] = $perfil;
+            $types .= 'i';
+        }
+        
+        if ($departamento === 'NULL') {
+            $updates[] = "departamento = NULL";
+        } elseif (!empty($departamento)) {
+            $updates[] = "departamento = ?";
+            $params[] = $departamento;
+            $types .= 'i';
+        }
+        
+        if ($status !== '') {
+            $updates[] = "active = ?";
+            $params[] = $status;
+            $types .= 'i';
+        }
+        
+        if (empty($updates)) {
+            throw new Exception('Nenhuma alteração a ser aplicada');
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($user_ids), '?'));
+        $types .= str_repeat('i', count($user_ids));
+        $params = array_merge($params, $user_ids);
+        
+        $sql = "UPDATE usuarios SET " . implode(', ', $updates) . " WHERE id IN ($placeholders)";
+        
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Erro ao atualizar usuários: ' . $stmt->error);
+        }
+        
+        $affected = $stmt->affected_rows;
+        $mysqli->commit();
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => "✅ $affected usuário(s) atualizado(s) com sucesso!"
+        ]);
+        
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    
+    exit;
+}
+
+// ========== ALTERAR STATUS EM LOTE ==========
+if ($action === 'batch_status') {
+    $user_ids = json_decode($_POST['user_ids'] ?? '[]', true);
+    $status = $_POST['status'] ?? '';
+    
+    if (empty($user_ids) || !is_array($user_ids)) {
+        echo json_encode(['success' => false, 'message' => 'Nenhum usuário selecionado']);
+        exit;
+    }
+    
+    if ($status === '') {
+        echo json_encode(['success' => false, 'message' => 'Status inválido']);
+        exit;
+    }
+    
+    // Remover o próprio usuário da lista
+    $user_ids = array_filter($user_ids, function($id) {
+        return $id != $_SESSION['user_id'];
+    });
+    
+    if (empty($user_ids)) {
+        echo json_encode(['success' => false, 'message' => 'Você não pode alterar o status do seu próprio usuário']);
+        exit;
+    }
+    
+    $placeholders = implode(',', array_fill(0, count($user_ids), '?'));
+    $types = 'i' . str_repeat('i', count($user_ids));
+    $params = array_merge([$status], $user_ids);
+    
+    $sql = "UPDATE usuarios SET active = ? WHERE id IN ($placeholders)";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param($types, ...$params);
+    
+    if ($stmt->execute()) {
+        $affected = $stmt->affected_rows;
+        $statusText = $status == 1 ? 'ativado(s)' : 'desativado(s)';
+        echo json_encode([
+            'success' => true, 
+            'message' => "✅ $affected usuário(s) $statusText com sucesso!"
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Erro ao atualizar status: ' . $stmt->error]);
+    }
+    
+    exit;
 }
 ?>

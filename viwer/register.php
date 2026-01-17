@@ -216,6 +216,12 @@ if (!isset($systemName)) {
             const formData = new FormData(this);
             const loginContainer = document.querySelector('.login_content');
             const loadingScreen = document.getElementById('loadingScreen');
+            
+            // Debug - mostrar dados que serão enviados
+            console.log('Dados do formulário:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
 
             // Esconder o formulário e mostrar loading
             loginContainer.style.display = 'none';

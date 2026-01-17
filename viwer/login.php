@@ -59,7 +59,7 @@ if (!isset($systemName)) {
     $systemFavicon = getConfig($mysqli, 'system_favicon', '');
 }
 ?>
-?>
+
 
 <!DOCTYPE html>
 <html lang="pt-BR">

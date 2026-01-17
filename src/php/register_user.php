@@ -66,9 +66,10 @@ try {
     
     // Verificar se o e-mail já existe (se tiver coluna email)
     $sql_check_email = "SHOW COLUMNS FROM usuarios LIKE 'email'";
-    $result_check = $mysqli->query($sql_check_email);
+    $result_check_email = $mysqli->query($sql_check_email);
+    $has_email_column = ($result_check_email->num_rows > 0);
     
-    if ($result_check->num_rows > 0) {
+    if ($has_email_column) {
         $sql = "SELECT id FROM usuarios WHERE email = ?";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('s', $email);
@@ -91,35 +92,36 @@ try {
     $result_check_status = $mysqli->query($sql_check_status);
     $has_status_column = ($result_check_status->num_rows > 0);
     
-    // Verificar se existe coluna 'email' na tabela usuarios
-    $has_email_column = ($result_check->num_rows > 0);
-    
     // Verificar se existe coluna 'nome_completo' na tabela usuarios
     $sql_check_nome = "SHOW COLUMNS FROM usuarios LIKE 'nome_completo'";
     $result_check_nome = $mysqli->query($sql_check_nome);
     $has_nome_column = ($result_check_nome->num_rows > 0);
     
-    // Inserir novo usuário
-    if ($has_status_column && $has_email_column && $has_nome_column) {
-        // Com todas as colunas
-        $sql = "INSERT INTO usuarios (user, password, perfil, email, nome_completo, status, active) VALUES (?, ?, ?, ?, ?, 'pending', 0)";
+    // Log para debug
+    error_log("Cadastro - Colunas disponíveis: status=" . ($has_status_column ? 'SIM' : 'NÃO') . 
+              ", email=" . ($has_email_column ? 'SIM' : 'NÃO') . 
+              ", nome_completo=" . ($has_nome_column ? 'SIM' : 'NÃO'));
+    error_log("Dados recebidos - user: $user, email: $email, nome_completo: $nome_completo");
+    
+    // Inserir novo usuário (sem coluna status que não existe)
+    if ($has_email_column && $has_nome_column) {
+        // Com email e nome completo
+        $sql = "INSERT INTO usuarios (user, password, perfil, email, nome_completo, active) VALUES (?, ?, ?, ?, ?, 0)";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('ssiss', $user, $senha_hash, $perfil_id, $email, $nome_completo);
-    } elseif ($has_status_column && $has_email_column) {
-        // Com status e email
-        $sql = "INSERT INTO usuarios (user, password, perfil, email, status, active) VALUES (?, ?, ?, ?, 'pending', 0)";
+        error_log("Usando INSERT com email e nome_completo (user=$user, email=$email, nome_completo=$nome_completo)");
+    } elseif ($has_email_column) {
+        // Só com email
+        $sql = "INSERT INTO usuarios (user, password, perfil, email, active) VALUES (?, ?, ?, ?, 0)";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('ssis', $user, $senha_hash, $perfil_id, $email);
-    } elseif ($has_status_column) {
-        // Só com status
-        $sql = "INSERT INTO usuarios (user, password, perfil, status, active) VALUES (?, ?, ?, 'pending', 0)";
-        $stmt = $mysqli->prepare($sql);
-        $stmt->bind_param('ssi', $user, $senha_hash, $perfil_id);
+        error_log("Usando INSERT com email (sem nome_completo)");
     } else {
-        // Sem coluna status (usuário fica inativo até admin ativar manualmente)
+        // Básico (usuário fica inativo até admin ativar manualmente)
         $sql = "INSERT INTO usuarios (user, password, perfil, active) VALUES (?, ?, ?, 0)";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param('ssi', $user, $senha_hash, $perfil_id);
+        error_log("Usando INSERT básico (sem email e nome_completo)");
     }
     
     if (!$stmt->execute()) {
