@@ -154,6 +154,7 @@ if ($has_status_column) {
                                     <?php else: ?>
                                         <button class="btn-icon btn-approve" onclick="toggleUserStatus(<?= $user['id'] ?>, 1)" title="Reativar" style="background: #10b981; color: white;">✓</button>
                                     <?php endif; ?>
+                                    <button class="btn-icon" onclick="deleteUser(<?= $user['id'] ?>, '<?= htmlspecialchars($user['user'], ENT_QUOTES) ?>')" title="Excluir Permanentemente" style="background: #dc2626; color: white;">🗑️</button>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -490,6 +491,40 @@ if ($has_status_column) {
             } catch (error) {
                 console.error('Erro:', error);
                 alert('❌ Erro ao ' + action + ' usuário');
+            }
+        }
+        
+        async function deleteUser(id, username) {
+            const confirmText = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\nDeseja realmente EXCLUIR PERMANENTEMENTE o usuário "${username}"?\n\nTodos os dados associados serão perdidos.\n\nDigite "EXCLUIR" para confirmar:`;
+            const userInput = prompt(confirmText);
+            
+            if (userInput !== 'EXCLUIR') {
+                if (userInput !== null) {
+                    alert('❌ Exclusão cancelada. Você deve digitar exatamente "EXCLUIR" para confirmar.');
+                }
+                return;
+            }
+            
+            try {
+                const response = await fetch('../src/php/crud_users.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete_permanent&id=' + id
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✓ ' + result.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + result.message);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao excluir usuário');
             }
         }
     </script>

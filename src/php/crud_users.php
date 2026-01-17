@@ -129,6 +129,43 @@ if ($action === 'toggle_status') {
     exit;
 }
 
+// ========== EXCLUIR PERMANENTEMENTE ==========
+if ($action === 'delete_permanent') {
+    $id = intval($_POST['id']);
+    
+    // Não permitir excluir o próprio usuário
+    if ($id == $_SESSION['user_id']) {
+        echo json_encode(['success' => false, 'message' => 'Você não pode excluir seu próprio usuário']);
+        exit;
+    }
+    
+    // Buscar informações do usuário antes de excluir (para log)
+    $sql_select = "SELECT user FROM usuarios WHERE id = ?";
+    $stmt_select = $mysqli->prepare($sql_select);
+    $stmt_select->bind_param('i', $id);
+    $stmt_select->execute();
+    $result_select = $stmt_select->get_result();
+    $user_data = $result_select->fetch_assoc();
+    
+    if (!$user_data) {
+        echo json_encode(['success' => false, 'message' => 'Usuário não encontrado']);
+        exit;
+    }
+    
+    // Excluir permanentemente do banco de dados
+    $sql = "DELETE FROM usuarios WHERE id = ?";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('i', $id);
+    
+    if ($stmt->execute()) {
+        error_log('Usuário excluído permanentemente: ' . $user_data['user'] . ' (ID: ' . $id . ') por admin ID: ' . $_SESSION['user_id']);
+        echo json_encode(['success' => true, 'message' => 'Usuário excluído permanentemente com sucesso']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Erro ao excluir usuário: ' . $stmt->error]);
+    }
+    exit;
+}
+
 // ========== DELETAR (DESATIVAR) USUÁRIO ==========
 if ($action === 'delete') {
     $id = intval($_POST['id']);

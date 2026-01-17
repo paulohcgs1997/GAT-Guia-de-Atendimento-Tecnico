@@ -57,6 +57,11 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                                 <i class="bi bi-cloud-download"></i> Atualizações
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="backups-tab" data-bs-toggle="tab" data-bs-target="#tab-backups" type="button" role="tab">
+                                <i class="bi bi-archive"></i> Backups
+                            </button>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -243,6 +248,51 @@ check_permission_admin(); // Apenas admin pode alterar configurações
                 </div>
             </div>
             
+            <!-- Guia: Gerenciamento de Backups -->
+            <div class="tab-pane fade" id="tab-backups" role="tabpanel">
+                <div class="config-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 8px; padding: 20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h3 class="mb-2">
+                                <i class="bi bi-archive"></i> Gerenciamento de Backups
+                            </h3>
+                            <p class="text-muted mb-0">
+                                Crie e restaure backups do sistema (mantém apenas os 3 mais recentes)
+                            </p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-warning" onclick="createManualBackup()">
+                                <i class="bi bi-plus-circle"></i> Criar Backup Manual
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div id="backupsList">
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <div class="spinner-border text-primary me-3" role="status"></div>
+                            <div>Carregando backups disponíveis...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
+                            <h6 style="color: #78350f; font-weight: 600;">
+                                <i class="bi bi-info-circle"></i> Informações Importantes
+                            </h6>
+                            <ul class="mb-0" style="color: #92400e;">
+                                <li>O sistema mantém automaticamente apenas os <strong>3 backups mais recentes</strong></li>
+                                <li>Backups são criados automaticamente antes de cada atualização</li>
+                                <li>Você pode criar backups manuais a qualquer momento</li>
+                                <li>Ao restaurar um backup, o sistema atual será substituído</li>
+                                <li>Um novo backup será criado automaticamente antes da restauração</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             </div><!-- Fecha tab-content Bootstrap -->
         </div>
     </main>
@@ -255,6 +305,7 @@ check_permission_admin(); // Apenas admin pode alterar configurações
     <script src="../src/js/config-database.js"></script>
     <script src="../src/js/config-system.js"></script>
     <script src="../src/js/system-updater.js"></script>
+    <script src="../src/js/backup-manager.js"></script>
     
     <!-- Verificação Automática de Atualizações -->
     <script>
