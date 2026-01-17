@@ -256,24 +256,32 @@ try {
             $branch = $matches[3];
             
             $commit_url = "https://api.github.com/repos/{$owner}/{$repo}/commits/{$branch}";
+            error_log('Buscando hash do commit em: ' . $commit_url);
             
             // Tentar buscar o hash (com ou sem token)
             $github_config = __DIR__ . '/../config/github_config.php';
             $token = '';
             if (file_exists($github_config)) {
                 require_once $github_config;
-                if (defined('GITHUB_TOKEN')) {
+                if (defined('GITHUB_TOKEN') && !empty(GITHUB_TOKEN)) {
                     $token = GITHUB_TOKEN;
+                    error_log('Token GitHub encontrado');
                 }
+            }
+            
+            $headers = [
+                'User-Agent: GAT-Sistema',
+                'Accept: application/vnd.github.v3+json'
+            ];
+            
+            if ($token) {
+                $headers[] = "Authorization: token {$token}";
             }
             
             $context = stream_context_create([
                 'http' => [
                     'method' => 'GET',
-                    'header' => [
-                        'User-Agent: GAT-Sistema',
-                        'Accept: application/vnd.github.v3+json'
-                    ] . ($token ? ['Authorization: token ' . $token] : []),
+                    'header' => $headers,
                     'timeout' => 10
                 ]
             ]);
@@ -283,17 +291,24 @@ try {
                 $commit_info = json_decode($commit_data, true);
                 if ($commit_info && isset($commit_info['sha'])) {
                     $version_info['commit_hash'] = $commit_info['sha'];
-                    error_log('Hash do commit obtido: ' . $commit_info['sha']);
+                    error_log('✅ Hash do commit obtido e salvo: ' . $commit_info['sha']);
+                } else {
+                    error_log('❌ Resposta do GitHub não contém hash (sha)');
+                    error_log('Resposta: ' . substr($commit_data, 0, 200));
                 }
+            } else {
+                error_log('❌ Falha ao buscar commit do GitHub API');
             }
+        } else {
+            error_log('❌ URL não corresponde ao padrão esperado do GitHub');
         }
     } catch (Exception $e) {
-        error_log('Não foi possível obter hash do commit: ' . $e->getMessage());
+        error_log('❌ Erro ao obter hash do commit: ' . $e->getMessage());
     }
     
     $version_file = $root_dir . DIRECTORY_SEPARATOR . '.last_update';
     file_put_contents($version_file, json_encode($version_info, JSON_PRETTY_PRINT));
-    error_log('Informações da versão salvas em .last_update');
+    error_log('📝 Informações da versão salvas em .last_update: ' . json_encode($version_info));
     
     // Limpar buffer final e enviar JSON
     ob_clean();
