@@ -14,6 +14,61 @@ if (!isset($_SESSION['user_id']) || $_SESSION['perfil'] != '1') {
     exit;
 }
 
+// Verificar se é requisição para salvar branch
+$action = $_POST['action'] ?? 'save_repo';
+
+if ($action === 'save_branch') {
+    saveBranch();
+    exit;
+}
+
+// Função para salvar o branch selecionado
+function saveBranch() {
+    global $mysqli;
+    
+    try {
+        $branch = trim($_POST['branch'] ?? '');
+        
+        if (empty($branch)) {
+            throw new Exception('Branch é obrigatório');
+        }
+        
+        // Validar formato do branch
+        if (!preg_match('/^[a-zA-Z0-9_\/-]+$/', $branch)) {
+            throw new Exception('Nome do branch inválido');
+        }
+        
+        // Verificar se já existe
+        $check_sql = "SELECT id FROM system_config WHERE config_key = 'github_branch'";
+        $check_result = $mysqli->query($check_sql);
+        
+        if ($check_result->num_rows > 0) {
+            // Atualizar
+            $stmt = $mysqli->prepare("UPDATE system_config SET config_value = ? WHERE config_key = 'github_branch'");
+            $stmt->bind_param('s', $branch);
+        } else {
+            // Inserir
+            $stmt = $mysqli->prepare("INSERT INTO system_config (config_key, config_value) VALUES ('github_branch', ?)");
+            $stmt->bind_param('s', $branch);
+        }
+        
+        if ($stmt->execute()) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Branch '{$branch}' configurado com sucesso!"
+            ]);
+        } else {
+            throw new Exception('Erro ao salvar no banco de dados');
+        }
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+}
+
 try {
     $github_url = trim($_POST['github_url'] ?? '');
     

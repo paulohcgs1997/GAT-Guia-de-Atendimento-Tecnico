@@ -1,0 +1,13 @@
+{
+  "name": "Desenvolvimento",
+  "type": "development",
+  "stability": "experimental",
+  "description": "Canal com recursos experimentais e novas funcionalidades",
+  "features": [],
+  "warnings": [
+    "Pode conter bugs",
+    "Não recomendado para produção"
+  ],
+  "recommended": false,
+  "color": "warning"
+}

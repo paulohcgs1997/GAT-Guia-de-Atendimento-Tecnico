@@ -17,7 +17,7 @@ check_permission_gestor();
 <body>
     <?php include_once PROJECT_ROOT . '/src/includes/header.php'; ?>
 
-    <?php include_once __DIR__ . '/includes/quick_menu.php'; ?>
+    
 
     <main>
         <div class="gestao-container">
