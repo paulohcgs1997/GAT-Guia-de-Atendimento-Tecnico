@@ -1,8 +1,8 @@
 {
     "major": 1,
     "minor": 2,
-    "patch": 0,
-    "version": "1.2.0",
-    "last_update": "2026-01-17 21:38:43",
-    "commit": "f14b445"
+    "patch": 1,
+    "version": "1.2.1",
+    "last_update": "2026-01-17 21:41:06",
+    "commit": "dd8fdcb"
 }
