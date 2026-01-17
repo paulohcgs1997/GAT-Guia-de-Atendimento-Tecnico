@@ -109,11 +109,12 @@ if (!isset($systemName)) {
             
             <!-- Mensagens de Erro -->
             <div id="mensagem"></div>
-            
-            <!-- Footer -->
-            <p class="footer-text">&copy; 2024 Empresa. Todos os direitos reservados.</p>
         </div>
     </div>
+
+    <footer>
+        <p>&copy; 2024 Empresa. Todos os direitos reservados.</p>
+    </footer>
 
     <!-- Scripts -->
     <script>

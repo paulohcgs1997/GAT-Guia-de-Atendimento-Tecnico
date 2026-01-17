@@ -1,45 +1,10 @@
 <?php
 header('Content-Type: application/json');
-require_once __DIR__ . '/../config/conexao.php';
 
-// Função para detectar repositório automaticamente do git remoto
-function detectGitHubRepo() {
-    $root_dir = realpath(__DIR__ . '/../..');
-    $git_config = $root_dir . '/.git/config';
-    
-    if (file_exists($git_config)) {
-        $config_content = file_get_contents($git_config);
-        
-        // Detectar URL do GitHub no formato: github.com:usuario/repositorio.git
-        if (preg_match('/github\.com[\/:]([^\/]+)\/([^\s\.]+)/i', $config_content, $matches)) {
-            return [
-                'owner' => $matches[1],
-                'repo' => str_replace('.git', '', $matches[2])
-            ];
-        }
-    }
-    
-    return null;
-}
+// Carregar configuração do GitHub
+$github_config_file = __DIR__ . '/../config/github_config.php';
 
-// Tentar detectar automaticamente
-$repo_info = detectGitHubRepo();
-
-// Se não detectou, buscar do banco de dados
-if (!$repo_info) {
-    $sql = "SELECT config_value FROM system_config WHERE config_key = 'github_repository'";
-    $result = $mysqli->query($sql);
-    
-    if ($result && $row = $result->fetch_assoc()) {
-        $repo_data = json_decode($row['config_value'], true);
-        if ($repo_data && isset($repo_data['owner']) && isset($repo_data['repo'])) {
-            $repo_info = $repo_data;
-        }
-    }
-}
-
-// Se ainda não tem informações, retornar erro
-if (!$repo_info || empty($repo_info['owner']) || empty($repo_info['repo'])) {
+if (!file_exists($github_config_file)) {
     $current_version = ['version' => '1.0.0', 'build' => 'desconhecido'];
     if (file_exists(__DIR__ . '/../../version.json')) {
         $current_version = json_decode(file_get_contents(__DIR__ . '/../../version.json'), true);
@@ -47,19 +12,36 @@ if (!$repo_info || empty($repo_info['owner']) || empty($repo_info['repo'])) {
     
     echo json_encode([
         'success' => false,
-        'error' => 'Repositório GitHub não configurado',
+        'error' => 'Sistema de atualizações não configurado',
         'current_version' => $current_version['version'],
-        'message' => 'Configure o repositório GitHub nas Configurações do Sistema'
+        'message' => 'O token do GitHub precisa ser configurado durante a instalação. Reinstale o sistema ou configure manualmente o arquivo src/config/github_config.php'
     ]);
     exit;
 }
 
-$github_owner = $repo_info['owner'];
-$github_repo = $repo_info['repo'];
-$github_api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}";
+require_once $github_config_file;
 
-// IMPORTANTE: Sempre usar o branch 'main' para atualizações
-$github_branch = 'main';
+// Validar se as constantes foram definidas
+if (!defined('GITHUB_TOKEN') || !defined('GITHUB_OWNER') || !defined('GITHUB_REPO')) {
+    $current_version = ['version' => '1.0.0', 'build' => 'desconhecido'];
+    if (file_exists(__DIR__ . '/../../version.json')) {
+        $current_version = json_decode(file_get_contents(__DIR__ . '/../../version.json'), true);
+    }
+    
+    echo json_encode([
+        'success' => false,
+        'error' => 'Configuração incompleta',
+        'current_version' => $current_version['version'],
+        'message' => 'O arquivo github_config.php existe mas está incompleto. Configure o token no arquivo src/config/github_config.php'
+    ]);
+    exit;
+}
+
+$github_token = GITHUB_TOKEN;
+$github_owner = GITHUB_OWNER;
+$github_repo = GITHUB_REPO;
+$github_branch = GITHUB_BRANCH;
+$github_api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}";
 
 // Ler versão atual do sistema
 $version_file = __DIR__ . '/../../version.json';
@@ -70,13 +52,14 @@ if (file_exists($version_file)) {
 }
 
 try {
-    // Configurar contexto para requisição HTTP (incluir User-Agent obrigatório para GitHub API)
+    // Configurar contexto para requisição HTTP com autenticação via token
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
             'header' => [
                 'User-Agent: GAT-Sistema',
-                'Accept: application/vnd.github.v3+json'
+                'Accept: application/vnd.github.v3+json',
+                "Authorization: token {$github_token}"
             ],
             'timeout' => 10
         ]
@@ -87,8 +70,8 @@ try {
     $release_data = @file_get_contents($releases_url, false, $context);
     
     if ($release_data === false) {
-        // Se não há releases, tentar obter info do último commit do branch main
-        $commits_url = "{$github_api_url}/commits/{$github_branch}";
+        // Se não há releases, buscar último commit do branch main
+        $commits_url = "{$github_api_url}/commits/main";
         $commit_data = @file_get_contents($commits_url, false, $context);
         
         if ($commit_data === false) {
@@ -104,12 +87,12 @@ try {
             'success' => true,
             'has_update' => false,
             'current_version' => $current_version['version'],
-            'latest_version' => 'desenvolvimento',
+            'latest_version' => $current_version['version'],
             'current_build' => $current_version['build'],
-            'message' => 'Sistema está em versão de desenvolvimento',
+            'message' => 'Sistema atualizado (branch main)',
             'repository' => "{$github_owner}/{$github_repo}",
             'branch' => 'main',
-            'download_url' => $main_branch_download,  // Sempre do branch main
+            'download_url' => $main_branch_download,
             'last_commit' => [
                 'sha' => substr($commit['sha'], 0, 7),
                 'message' => $commit['commit']['message'],
