@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/conexao.php';
 
 // Verificar permissões de admin
 session_start();
-if (!isset($_SESSION['usuario_id']) || $_SESSION['usuario_tipo'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     echo json_encode(['success' => false, 'error' => 'Permissão negada']);
     exit;
 }
