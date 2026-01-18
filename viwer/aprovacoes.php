@@ -41,6 +41,7 @@ if ($check_col->num_rows > 0) {
                         LEFT JOIN departaments d ON b.departamento = d.id
                         WHERE b.active = 1 
                         AND b.status = 'pending'
+                        AND b.status != 'rejected'
                         AND b.is_clone = 1
                         $dept_filter
                         ORDER BY b.last_modification DESC";
@@ -83,7 +84,7 @@ if ($check_col_services->num_rows > 0) {
                        FROM services s
                        LEFT JOIN departaments d ON s.departamento = d.id
                        LEFT JOIN services so ON s.original_id = so.id
-                       WHERE s.active = 1 AND s.status = 'pending'
+                       WHERE s.active = 1 AND s.status = 'pending' AND s.status != 'rejected'
                        $dept_filter_services
                        ORDER BY s.is_clone DESC, s.last_modification DESC";
 } else {

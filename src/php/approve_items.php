@@ -467,7 +467,15 @@ elseif ($action === 'reject') {
         }
     } else {
         // Item novo - marcar como rejeitado (accept = 2) para remover da lista de pendentes
-        $stmt = $mysqli->prepare("UPDATE $table SET rejection_reason = ?, rejected_by = ?, reject_date = NOW(), accept = 2 WHERE id = ?");
+        // Verificar se existe coluna status
+        $check_status_col = $mysqli->query("SHOW COLUMNS FROM $table LIKE 'status'");
+        $has_status = $check_status_col->num_rows > 0;
+        
+        if ($has_status) {
+            $stmt = $mysqli->prepare("UPDATE $table SET rejection_reason = ?, rejected_by = ?, reject_date = NOW(), accept = 2, status = 'rejected' WHERE id = ?");
+        } else {
+            $stmt = $mysqli->prepare("UPDATE $table SET rejection_reason = ?, rejected_by = ?, reject_date = NOW(), accept = 2 WHERE id = ?");
+        }
         $stmt->bind_param("sii", $reason, $rejectedBy, $id);
         
         error_log("Reject - Executing update query for table: $table, id: $id");
