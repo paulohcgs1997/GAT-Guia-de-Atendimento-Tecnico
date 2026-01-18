@@ -1867,8 +1867,10 @@ if ($test_query->num_rows == 0) {
                 const stepIds = Object.keys(tutorialSteps).join(',');
                 formData.append('id_step', stepIds);
                 
-                // SEMPRE enviar clear_rejection para que edições voltem para aprovação
-                formData.append('clear_rejection', 'true');
+                // Enviar clear_rejection APENAS se o tutorial estava rejeitado
+                if (isRejectedTutorial) {
+                    formData.append('clear_rejection', 'true');
+                }
 
                 const response = await fetch('../src/php/crud_blocos.php', {
                     method: 'POST',

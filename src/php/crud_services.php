@@ -164,18 +164,38 @@ if (empty($name)) {
 if ($id) {
     // Preparar SQL baseado se deve limpar rejeição
     if ($clear_rejection) {
-        $sql = "UPDATE services SET 
-                name = ?, 
-                description = ?, 
-                departamento = ?, 
-                blocos = ?, 
-                word_keys = ?,
-                rejection_reason = NULL,
-                rejected_by = NULL,
-                reject_date = NULL,
-                accept = 0,
-                last_modification = NOW()
-                WHERE id = ?";
+        // Verificar se campo status existe
+        $check_status_field = $mysqli->query("SHOW COLUMNS FROM services LIKE 'status'");
+        $status_exists = $check_status_field->num_rows > 0;
+        
+        if ($status_exists) {
+            $sql = "UPDATE services SET 
+                    name = ?, 
+                    description = ?, 
+                    departamento = ?, 
+                    blocos = ?, 
+                    word_keys = ?,
+                    rejection_reason = NULL,
+                    rejected_by = NULL,
+                    reject_date = NULL,
+                    accept = 0,
+                    status = 'draft',
+                    last_modification = NOW()
+                    WHERE id = ?";
+        } else {
+            $sql = "UPDATE services SET 
+                    name = ?, 
+                    description = ?, 
+                    departamento = ?, 
+                    blocos = ?, 
+                    word_keys = ?,
+                    rejection_reason = NULL,
+                    rejected_by = NULL,
+                    reject_date = NULL,
+                    accept = 0,
+                    last_modification = NOW()
+                    WHERE id = ?";
+        }
     } else {
         $sql = "UPDATE services SET 
                 name = ?, 
@@ -191,7 +211,7 @@ if ($id) {
     $stmt->bind_param('ssissi', $name, $description, $departamento, $blocos, $word_keys, $id);
     
     if ($stmt->execute()) {
-        $message = $clear_rejection ? 'Serviço corrigido e enviado para aprovação' : 'Serviço atualizado com sucesso';
+        $message = $clear_rejection ? 'Serviço corrigido e salvo como rascunho' : 'Serviço atualizado com sucesso';
         echo json_encode(['success' => true, 'message' => $message]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Erro ao atualizar serviço']);

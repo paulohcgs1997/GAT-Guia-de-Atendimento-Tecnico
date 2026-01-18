@@ -576,6 +576,9 @@ if ($test_query->num_rows == 0) {
         }
 
         function openModal() {
+            // Limpar flag de serviço rejeitado ao abrir modal para novo serviço
+            window.isEditingRejectedService = false;
+            
             document.getElementById('modalTitle').textContent = 'Novo Serviço';
             document.getElementById('serviceForm').reset();
             document.getElementById('serviceId').value = '';
@@ -596,6 +599,9 @@ if ($test_query->num_rows == 0) {
         }
 
         async function editService(service) {
+            // Armazenar se o serviço estava rejeitado (para enviar clear_rejection ao salvar)
+            window.isEditingRejectedService = (service.rejection_reason && service.rejection_reason.trim() !== '');
+            
             // Verificar se o serviço está aprovado
             if (service.accept == 1) {
                 const userConfirmed = await showConfirm(
@@ -709,8 +715,8 @@ if ($test_query->num_rows == 0) {
                 formData.append('blocos[]', blocoId);
             });
             
-            // Se tiver ID (edição), sempre enviar clear_rejection para reaprovar
-            if (formData.get('id')) {
+            // Se tiver ID (edição) E estava rejeitado, enviar clear_rejection
+            if (formData.get('id') && window.isEditingRejectedService) {
                 formData.append('clear_rejection', 'true');
             }
             

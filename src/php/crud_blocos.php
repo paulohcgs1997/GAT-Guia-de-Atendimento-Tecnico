@@ -94,15 +94,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id) {
         // Preparar SQL baseado se deve limpar rejeição
         if ($clear_rejection) {
-            $sql = "UPDATE blocos SET 
-                    name = ?, 
-                    id_step = ?,
-                    rejection_reason = NULL,
-                    rejected_by = NULL,
-                    reject_date = NULL,
-                    accept = 0,
-                    last_modification = NOW()
-                    WHERE id = ?";
+            // Verificar se campo status existe
+            $check_status_field = $mysqli->query("SHOW COLUMNS FROM blocos LIKE 'status'");
+            $status_exists = $check_status_field->num_rows > 0;
+            
+            if ($status_exists) {
+                $sql = "UPDATE blocos SET 
+                        name = ?, 
+                        id_step = ?,
+                        rejection_reason = NULL,
+                        rejected_by = NULL,
+                        reject_date = NULL,
+                        accept = 0,
+                        status = 'draft',
+                        last_modification = NOW()
+                        WHERE id = ?";
+            } else {
+                $sql = "UPDATE blocos SET 
+                        name = ?, 
+                        id_step = ?,
+                        rejection_reason = NULL,
+                        rejected_by = NULL,
+                        reject_date = NULL,
+                        accept = 0,
+                        last_modification = NOW()
+                        WHERE id = ?";
+            }
         } else {
             $sql = "UPDATE blocos SET 
                     name = ?, 
@@ -115,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('ssi', $name, $id_step, $id);
         
         if ($stmt->execute()) {
-            $message = $clear_rejection ? 'Tutorial corrigido e enviado para aprovação' : 'Bloco atualizado com sucesso';
+            $message = $clear_rejection ? 'Tutorial corrigido e salvo como rascunho' : 'Bloco atualizado com sucesso';
             echo json_encode(['success' => true, 'message' => $message]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Erro ao atualizar bloco']);
