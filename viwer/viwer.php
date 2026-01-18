@@ -209,7 +209,8 @@ check_permission_viewer();
                     <h3>${servico.name}</h3>
                     <p>${servico.description || ''}</p>
                     <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
-                        📚 Passo ${stepAtualIndex + 1} de ${todosSteps.length}
+                        📚 Tutorial ${blocoAtualIndex + 1} de ${todosBlocos.length}
+                        ${todosBlocos.length > 1 ? ` | ${todosBlocos.length - blocoAtualIndex - 1} restante(s)` : ''}
                     </div>
                 </div>
             `;
